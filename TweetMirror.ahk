@@ -9,9 +9,12 @@ SettingsName := "TweetMirror.ini"
 
 
 ; Global vars (leave empty)
-EmailAddress :=
-EmployeeNumber :=
-EmailAddressKey :=
+TeamsWebhookURL :=
+TwitterScreenName :=
+TweetHashtag :=
+LastTweetID :=
+ConsumerKey :=
+ConsumerSecret :=
 
 
 
@@ -62,40 +65,43 @@ ProcessTwitterAPICall(authtoken, url) {
 }
 
 
-; FirstTimeSetup(SettingsName) {
-	; InputBox, EmailAddress, PasteyShortcuts, Enter your email address,,310,150
+FirstTimeSetup(SettingsName) {
+	InputBox, TeamsWebhookURL, TweetMirror, Enter your MS Teams connector WebHook URL,,310,150,,,,,%TeamsWebhookURL%
+	InputBox, TwitterScreenName, TweetMirror, Enter your Twitter username,,310,150,,,,,@
+	InputBox, TweetHashtag, TweetMirror, Enter the hashtags you want to filter Tweets with,,310,150,,,,,#
 	
-	; ; Re-run setup until user settings are valid
-	; while (StrLen(EmailAddress) < 3) {
-		; MsgBox, Invalid email address entered!
-		; FirstTimeSetup(SettingsName)
-		; return
-	; }
+	InputBox, ConsumerKey, TweetMirror, Enter your Twitter app's consumer key,,310,150
+	InputBox, ConsumerSecret, TweetMirror, Enter your Twitter app's consumer secret,,310,150
+	
+	; Strip unneeded characters
+	TwitterScreenName := StrReplace(TwitterScreenName, "@")
+	TweetHashtag := StrReplace(TweetHashtag, "#")
+	
+	; Write user's settings
+	IniWrite, %TeamsWebhookURL%, %SettingsName%, Settings, TeamsWebhookURL
+	IniWrite, %TwitterScreenName%, %SettingsName%, Settings, TwitterScreenName
+	IniWrite, %TweetHashtag%, %SettingsName%, Settings, TweetHashtag
+	
+	IniWrite, %ConsumerKey%, %SettingsName%, Settings, ConsumerKey
+	IniWrite, %ConsumerSecret%, %SettingsName%, Settings, ConsumerSecret
+	
+	MsgBox, Setup complete!
+}
 
-	; InputBox, EmployeeNumber, PasteyShortcuts, Enter your employee number (leave blank to disable # hotkey),,310,150
-	
-	; ; Write user's settings
-	; IniWrite, %EmailAddress%, %SettingsName%, Details, EmailAddress
-	; IniWrite, %EmployeeNumber%, %SettingsName%, Details, EmployeeNumber
-	
-	; ; Write default hotkeys
-	; IniWrite, @, %SettingsName%, Hotkeys, PasteEmailAddress
-	; IniWrite, #, %SettingsName%, Hotkeys, PasteEmployeeNumber
-	
-	; MsgBox, Setup complete! Double press @ to paste your email or # to paste your employee number!
-; }
+; If setting file doesn't exist run first time setup
+if (!FileExist(SettingsName)) {
+	MsgBox, Thanks for downloading my tool! To use it, you must setup your details...
+	FirstTimeSetup(SettingsName)
+}
 
-; ; If setting file doesn't exist run first time setup
-; if (!FileExist(SettingsName)) {
-	; MsgBox, Thanks for downloading my tool! To use it, you must now enter your details...
-	; FirstTimeSetup(SettingsName)
-; }
+; Load settings into global variables
+IniRead, TeamsWebhookURL, %SettingsName%, Settings, TeamsWebhookURL
+IniRead, TwitterScreenName, %SettingsName%, Settings, TwitterScreenName
+IniRead, TweetHashtag, %SettingsName%, Settings, TweetHashtag
+IniRead, LastTweetID, %SettingsName%, Settings, LastTweetID
 
-; ; Load settings into global variables
-; IniRead, EmailAddress, %SettingsName%, Details, EmailAddress
-; IniRead, EmployeeNumber, %SettingsName%, Details, EmployeeNumber
-; IniRead, EmailAddressKey, %SettingsName%, Hotkeys, PasteEmailAddress
-; IniRead, EmployeeNumberKey, %SettingsName%, Hotkeys, PasteEmployeeNumber
+IniRead, ConsumerKey, %SettingsName%, Settings, ConsumerKey
+IniRead, ConsumerSecret, %SettingsName%, Settings, ConsumerSecret
 
 
 
@@ -105,30 +111,8 @@ ProcessTwitterAPICall(authtoken, url) {
 	; Hotkey, ~$%EmployeeNumberKey%, EmployeeNumberKeyHandler
 ; }
 
-FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
-; Catch file load error
-if (ErrorLevel) {
-    MsgBox, TeamsCardTemplate.json couldn't be read!
-	ExitApp
-}
-
-TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
 
 
-; Twitter user vars:
-profillePic := "https://pbs.twimg.com/profile_images/915234036771168256/eONTBzwz_normal.jpg" ;"profile_image_url_https"
-screenName := "lloydjason94"
-
-; Fill in template:
-TeamsMsgJSON[1].columns[1].items[1].url = profillePic
-TeamsMsgJSON[1].columns[2].items[1].text = "**Jason LLoyd Tweeted:**"
-TeamsMsgJSON[1].columns[2].items[2].text = "hello world tweet body"
-TeamsMsgJSON[2].items[1].columns[2].items[1].actions.title = "Follow @" . screenName
-TeamsMsgJSON[2].items[1].columns[2].items[1].actions.url = "hello world tweet body"
-
-TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
-
-return
 
 
 ; Base64 helper functions
@@ -152,8 +136,6 @@ b64Decode(string) {
 
 
 ; Authenticate using FreddieDevTweetMirror
-ConsumerKey := "S4BCR1KqwdVJR6QuCOsF32Y0n"
-ConsumerSecret := "t6ygJMK58orSbn6jVCudJ2gjDmJtMhSlVYH1kw1cptisIIDcV0"
 BearerTokenCredentials := ConsumerKey . ":" . ConsumerSecret
 BearerTokenCredentialsEncoded := b64Encode(BearerTokenCredentials)
 AuthString := "Basic " . BearerTokenCredentialsEncoded
@@ -186,6 +168,46 @@ TweetsURL := GetTweetsAPIURL("lloydjason94", "1195419706842324992")
 MyTweets := ProcessTwitterAPICall(accessToken, TweetsURL)
 MsgBox, %MyTweets%
 
+
+
+; Load teams card template JSON into object
+FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
+; Catch file load error
+if (ErrorLevel) {
+    MsgBox, TeamsCardTemplate.json couldn't be read!
+	ExitApp
+}
+TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
+
+
+; Twitter user vars:
+; profillePic := "https://pbs.twimg.com/profile_images/915234036771168256/eONTBzwz_normal.jpg" ; profile_image_url_https
+accountName := "Jason Lloyd" ; user.name
+screenName := "lloydjason94" ; user.screen_name
+tweetTheme := "1DA1F2" ; profile_link_color
+tweetDate := "Thu Nov 28 15:12:23 +0000 2019" ; created_at
+tweetBody := "Hello world #tweetmirror" ; text
+
+
+; Fill in template:
+TeamsMsgJSON.title := accountName . " Tweeted:"
+TeamsMsgJSON.summary := accountName . " shared a Tweet."
+TeamsMsgJSON.themeColor := tweetTheme
+TeamsMsgJSON.potentialAction[1].name := "Follow @" . screenName
+TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . screenName
+TeamsMsgJSON.sections[1].facts[1].name := "Posted at:"
+TeamsMsgJSON.sections[1].facts[1].value :=  tweetDate
+TeamsMsgJSON.sections[1].text := tweetBody
+
+TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
+
+; Send message to teams
+whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+whr.Open("POST", TeamsWebhookURL, true)
+whr.SetRequestHeader("Content-Type", "application/json")
+whr.Send(TeamsMsgJSONStr)
+whr.WaitForResponse()
+
 return ; Stop handlers running on script start
 
 
@@ -209,8 +231,7 @@ MenuHandler:
 	} else if (A_ThisMenuItem = MenuExitScriptText) {
 		ExitApp
 	} else if (A_ThisMenuItem = MenuChangeSettingsText) {
-		; FirstTimeSetup(SettingsName)
-		MsgBox, Oh dear!
+		FirstTimeSetup(SettingsName)
 	}
 
 	return

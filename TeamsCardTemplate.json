@@ -1,96 +1,30 @@
 {
-	"$schema": "https://adaptivecards.io/schemas/adaptive-card.json",
-	"type": "AdaptiveCard",
-	"version": "1.0",
-	"body": [
-		{
-			"type": "ColumnSet",
-			"columns": [
-				{
-					"width": "32px",
-					"items": [
-						{
-							"type": "Image",
-							"width": "16px",
-							"horizontalAlignment": "center",
-							"url": "https://raw.githubusercontent.com/FreddieDev/TweetMirror/master/artwork/TweetMirror%20-%20Small.png",
-							"altText": "TweetMirror Logo"
-						}
-					]
-				},
-				{
-					"width": "stretch",
-					"items": [
-						{
-							"type": "TextBlock",
-							"text": "TweetMirror"
-						}
-					]
-				}
-			]
-		},
-		{
-			"type": "ColumnSet",
-			"spacing": "large",
-			"separator": true,
-			"columns": [
-				{
-					"width": "32px",
-					"items": [
-						{
-							"type": "Image",
-							"width": "32px",
-							"style": "person",
-							"horizontalAlignment": "center",
-							"url": "https://pbs.twimg.com/profile_images/915234036771168256/eONTBzwz_normal.jpg",
-							"altText": "Profile Picture"
-						}
-					]
-				},
-				{
-					"width": "stretch",
-					"items": [
-						{
-							"type": "TextBlock",
-							"text": "**Jason LLoyd Tweeted:**"
-						},
-						{
-							"type": "TextBlock",
-							"spacing": "none",
-							"isSubtle": true,
-							"text": "\"If my account posts anything strange, ignore it, I am doing some automation testing with it :)"
-						}
-					]
-				}
-			]
-		},
-		{
-			"type": "Container",
-			"items": [
-				{
-					"type": "ColumnSet",
-					"columns": [
-						{
-							"width": "32px"
-						},
-						{
-							"width": "stretch",
-							"items": [
-								{
-									"type": "ActionSet",
-									"actions": [
-										{
-											"type": "Action.OpenUrl",
-                                            "title": "Follow @lloydjason94",
-                                            "url": "https://twitter.com/lloydjason94"
-										}
-									]
-								}
-							]
-						}
-					]
-				}
-			]
-		}
-	]
+    "@context": "https://schema.org/extensions",
+    "@type": "MessageCard",
+    "title": "XXX Tweeted:",
+    "summary": "XXX shared a Tweet",
+    "themeColor": "0072C6",
+    "potentialAction": [
+        {
+            "@type": "OpenUri",
+            "name": "Follow @XXXXX",
+            "targets": [
+                {
+                    "os": "default",
+                    "uri": "https://twitter.com/"
+                }
+            ]
+        }
+    ],
+    "sections": [
+        {
+            "facts": [
+                {
+                    "name": "Posted At:",
+                    "value": ""
+                }
+            ],
+            "text": "Hello world #TweetMirror"
+        }
+    ]
 }
