@@ -6,7 +6,7 @@ SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 SettingsName := "TweetMirror.ini"
 
 #Include JSON.ahk
-
+#Include lib.ahk
 
 ; Global vars (leave empty)
 TeamsWebhookURL :=
@@ -17,9 +17,17 @@ ConsumerSecret :=
 LastTweetID :=
 TwitterAccessToken :=
 
+; Global vars (hard-coded settings)
+PollRate := 30000 ; How frequently to check for new tweets
+ERROR_ICON := 78
+LOADING_ICON := 239
+DEFAULT_ICON := StrReplace(A_ScriptFullPath, ".ahk", ".exe")
+NextPoll := A_TickCount
+
 
 
 ; Cleanup tray menu items
+Menu, Tray, Tip, TweetMirror
 Menu, Tray, NoStandard
 
 ; Add change settings button
@@ -37,17 +45,13 @@ Menu, Tray, Add, %MenuReloadScriptText%, MenuHandler
 MenuExitScriptText := "Exit script"
 Menu, Tray, Add, %MenuExitScriptText%, MenuHandler
 
-; Change the tray icon
-GEAR_CHECKLIST_ICON := 110
-Menu, Tray, Icon, imageres.dll, %GEAR_CHECKLIST_ICON%
-
 
 
 ; Builds an API URL to get Tweets by account, written since a given tweet (by ID)
 ; If no Tweet ID is provided, the URL will be setup to get the 200 most recent tweets
 GetTweetsAPIURL(username, sinceTweetID) {
 	local sinceTweetSetting :=
-	if (sinceTweetID != error & StrLen(sinceTweetID) != 0) {
+	if (sinceTweetID != "ERROR" and StrLen(sinceTweetID) != 0) {
 		sinceTweetSetting = &since_id=%sinceTweetID%
 	}
 
@@ -89,6 +93,7 @@ FirstTimeSetup(SettingsName) {
 	MsgBox, Setup complete!
 }
 
+
 ; Takes a tweet object and sends it to MS teams
 MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	
@@ -96,20 +101,25 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
 	; Catch file load error
 	if (ErrorLevel) {
-		MsgBox, TeamsCardTemplate.json couldn't be read!
-		ExitApp
+		throw Exception("TeamsCardTemplate.json couldn't be read!", -1)
+		return
 	}
 	TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
 
 	; Fill in template:
 	TeamsMsgJSON.title := tweetObj.user.name . " Tweeted:"
 	TeamsMsgJSON.summary := tweetObj.user.name . " shared a Tweet."
-	TeamsMsgJSON.themeColor := tweetObj.user.profile_link_color
-	TeamsMsgJSON.potentialAction[1].name := "Follow @" . tweetObj.user.screen_name
-	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name
-	TeamsMsgJSON.sections[1].facts[1].name := "Date:"
-	TeamsMsgJSON.sections[1].facts[1].value :=  tweetObj.created_at
-	TeamsMsgJSON.sections[1].text := tweetObj.text
+	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name . "/status/" . tweetObj.id
+	TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(tweetObj.text)
+	
+	; Process URLs in message
+	urlsRegex := "i)[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?"
+	newText := RegExReplace(tweetObj.text, urlsRegex, "[https://t.co/$1](https://t.co/$1)")
+	
+	; Process hashtags in message
+	hashtagsRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)"
+	newText := RegExReplace(newText, hashtagsRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
+	TeamsMsgJSON.sections[1].text := newText
 	
 	; Turn JSON object to string
 	TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
@@ -121,6 +131,80 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	whr.Send(TeamsMsgJSONStr)
 	whr.WaitForResponse()
 }
+
+
+
+GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret) {
+	BearerTokenCredentials := ConsumerKey . ":" . ConsumerSecret
+	BearerTokenCredentialsEncoded := b64Encode(BearerTokenCredentials)
+	AuthString := "Basic " . BearerTokenCredentialsEncoded
+	
+	; Post request to Twitter for auth token
+	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	whr.Open("POST", "https://api.twitter.com/oauth2/token", true)
+	whr.SetRequestHeader("Authorization", AuthString)
+	whr.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+	whr.Send("grant_type=client_credentials")
+	
+	; Wait for response to load
+	whr.WaitForResponse()
+	sleep 200
+
+	; Parse JSON string into object
+	authObj := JSON.Load(whr.ResponseText)
+	
+	; Cache token
+	TwitterAccessToken := authObj.access_token
+	IniWrite, %TwitterAccessToken%, %SettingsName%, Vars, TwitterAccessToken
+	
+	return %TwitterAccessToken%
+}
+
+; Returns rounded-down number of seconds until next check for new tweets
+GetSecondsUntilNextCheck(NextPoll) {
+	return Floor((NextPoll - A_TickCount) / 1000)
+}
+
+; Checks for new Tweets and appropriate ones to MS Teams
+; Returns true if check was successful (no errors)
+ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, TeamsWebhookURL, SettingsName) {
+	; Get tweets
+	TweetsURL := GetTweetsAPIURL("lloydjason94", LastTweetID)
+	MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
+	MyTweets := JSON.Load(MyTweetsJSON) ; Convert JSON to object
+	
+	
+	; Check if Twitter blocked the call
+	if (MyTweets.errors) {
+		errorMsg := MyTweets.errors[1].message
+		Menu, Tray, Tip, TweetMirror error: %errorMsg%
+		return false
+	}
+	
+	; Stop if no new tweets found
+	newTweetCount := MyTweets.Length()
+	if (newTweetCount = 0) {
+		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
+		return true
+	}
+
+	; Process new tweets
+	for index, tweet in MyTweets {
+		; If tweet contains desired hashtag, forward to MS Teams
+		if (InStr(tweet.text, TweetHashtag)) {
+			MirrorTweetToTeams(TeamsWebhookURL, tweet)
+		}
+	}
+	Menu, Tray, Tip, %newTweetCount% new #%TweetHashtag% Tweet(s) recently mirrored!
+
+	; Update last processed tweet ID
+	; This speeds up future calls to Twitter API and tweet processing
+	LastTweetID := MyTweets[1].id
+	IniWrite, %LastTweetID%, %SettingsName%, Vars, LastTweetID
+	
+	return true
+}
+
 
 
 ; If setting file doesn't exist run first time setup
@@ -143,74 +227,32 @@ IniRead, TwitterAccessToken, %SettingsName%, Vars, TwitterAccessToken
 
 
 
-
-; Base64 helper functions
-b64Encode(string) {
-    VarSetCapacity(bin, StrPut(string, "UTF-8")) && len := StrPut(string, &bin, "UTF-8") - 1 
-    if !(DllCall("crypt32\CryptBinaryToString", "ptr", &bin, "uint", len, "uint", 0x1, "ptr", 0, "uint*", size))
-        throw Exception("CryptBinaryToString failed", -1)
-    VarSetCapacity(buf, size << 1, 0)
-    if !(DllCall("crypt32\CryptBinaryToString", "ptr", &bin, "uint", len, "uint", 0x1, "ptr", &buf, "uint*", size))
-        throw Exception("CryptBinaryToString failed", -1)
-    return StrReplace(StrGet(&buf), "`r`n") ; Remove all line breaks (sometimes randomly added in the middle, breaks stuff)
-}
-b64Decode(string) {
-    if !(DllCall("crypt32\CryptStringToBinary", "ptr", &string, "uint", 0, "uint", 0x1, "ptr", 0, "uint*", size, "ptr", 0, "ptr", 0))
-        throw Exception("CryptStringToBinary failed", -1)
-    VarSetCapacity(buf, size, 0)
-    if !(DllCall("crypt32\CryptStringToBinary", "ptr", &string, "uint", 0, "uint", 0x1, "ptr", &buf, "uint*", size, "ptr", 0, "ptr", 0))
-        throw Exception("CryptStringToBinary failed", -1)
-    return StrGet(&buf, size, "UTF-8")
-}
-
-
 ; Get Twitter app (FreddieDevTweetMirror) access token if none is cached
 if (TwitterAccessToken = error or StrLen(TwitterAccessToken) = 0) {
-	BearerTokenCredentials := ConsumerKey . ":" . ConsumerSecret
-	BearerTokenCredentialsEncoded := b64Encode(BearerTokenCredentials)
-	AuthString := "Basic " . BearerTokenCredentialsEncoded
+	TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+}
 
-	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-	whr.Open("POST", "https://api.twitter.com/oauth2/token", true)
-	whr.SetRequestHeader("Authorization", AuthString)
-	whr.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
-	; whr.SetRequestHeader("User-Agent", "FreddieDevTweetMirror")
-	whr.Send("grant_type=client_credentials")
-	whr.WaitForResponse()
-	sleep 200
-	msgBody := whr.ResponseText
-
-	authJSON := JSON.Load(msgBody)
+; Endlessly run checks for new tweets
+Loop {
+	Menu, Tray, Icon, shell32.dll, %LOADING_ICON%
 	
-	TwitterAccessToken := authJSON.access_token
-	IniWrite, %TwitterAccessToken%, %SettingsName%, Vars, TwitterAccessToken ; Cache
-}
-
-
-
-
-; Get tweets
-TweetsURL := GetTweetsAPIURL("lloydjason94", LastTweetID)
-MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
-MyTweets := JSON.Load(MyTweetsJSON) ; Convert JSON to object
-
-; Quit app if no new tweets found
-if (MyTweets.Length() = 0) {
-	ExitApp
-}
-
-
-; Process tweets
-for index, tweet in MyTweets {
-    if (InStr(tweet.text, TweetHashtag)) {
-		MirrorTweetToTeams(TeamsWebhookURL, tweet)
+	; Add time to next poll time
+	NextPoll += PollRate
+	
+	; Check for new tweets
+	ProcessSuccessful := ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, TeamsWebhookURL, SettingsName)
+	
+	if (!ProcessSuccessful) {
+		Menu, Tray, Icon, shell32.dll, %ERROR_ICON%
+		
+		MsgBox, Error occurred when polling Twitter... regenerating auth key.
+		TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+	} else {
+		Menu, Tray, Icon, %DEFAULT_ICON% ; Restore default icon
 	}
+	
+	Sleep, PollRate
 }
-
-; Update last tweet ID
-LastTweetID := MyTweets[1].id
-IniWrite, %LastTweetID%, %SettingsName%, Vars, LastTweetID
-
 
 return ; Stop handlers running on script start
 
@@ -227,4 +269,15 @@ MenuHandler:
 		FirstTimeSetup(SettingsName)
 	}
 
+	return
+
+; Loops in background updating tray menu tooltip until a check is about to start
+UpdateMenuTip:
+	secondsTilCheck := GetSecondsUntilNextCheck(NextPoll)
+	
+	if (secondsTilCheck <= 1) {
+		SetTimer UpdateMenuTip, Delete
+	}
+	
+	Menu, Tray, Tip, No new #%TweetHashtag% Tweets (next check: %secondsTilCheck% seconds)
 	return

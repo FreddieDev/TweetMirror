@@ -3,27 +3,31 @@
     "@type": "MessageCard",
     "title": "XXX Tweeted:",
     "summary": "XXX shared a Tweet",
-    "themeColor": "0072C6",
+    "themeColor": "8000e8",
     "potentialAction": [
         {
             "@type": "OpenUri",
-            "name": "Follow @XXXXX",
+            "name": "View on Twitter",
             "targets": [
                 {
                     "os": "default",
                     "uri": "https://twitter.com/"
                 }
             ]
+        },
+		{
+            "@type": "OpenUri",
+            "name": "Copy Tweet",
+            "targets": [
+                {
+                    "os": "default",
+                    "uri": "https://twitter.com/intent/tweet?text=hello%20world"
+                }
+            ]
         }
     ],
     "sections": [
         {
-            "facts": [
-                {
-                    "name": "Posted At:",
-                    "value": ""
-                }
-            ],
             "text": "Hello world #TweetMirror"
         }
     ]
