@@ -16,6 +16,7 @@ echo.
 echo Installing files...
 copy TweetMirror.exe %installDir%\TweetMirror.exe
 copy TweetMirror.ini %installDir%\TweetMirror.ini
+copy TweetMirror.ini %installDir%\TeamsCardTemplate.json
 
 echo.
 echo Adding to startup...
