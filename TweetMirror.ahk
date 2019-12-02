@@ -12,9 +12,10 @@ SettingsName := "TweetMirror.ini"
 TeamsWebhookURL :=
 TwitterScreenName :=
 TweetHashtag :=
-LastTweetID :=
 ConsumerKey :=
 ConsumerSecret :=
+LastTweetID :=
+TwitterAccessToken :=
 
 
 
@@ -46,7 +47,7 @@ Menu, Tray, Icon, imageres.dll, %GEAR_CHECKLIST_ICON%
 ; If no Tweet ID is provided, the URL will be setup to get the 200 most recent tweets
 GetTweetsAPIURL(username, sinceTweetID) {
 	local sinceTweetSetting :=
-	if (StrLen(sinceTweetID) != 0) {
+	if (sinceTweetID != error & StrLen(sinceTweetID) != 0) {
 		sinceTweetSetting = &since_id=%sinceTweetID%
 	}
 
@@ -88,6 +89,40 @@ FirstTimeSetup(SettingsName) {
 	MsgBox, Setup complete!
 }
 
+; Takes a tweet object and sends it to MS teams
+MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
+	
+	; Load teams card template JSON into object
+	FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
+	; Catch file load error
+	if (ErrorLevel) {
+		MsgBox, TeamsCardTemplate.json couldn't be read!
+		ExitApp
+	}
+	TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
+
+	; Fill in template:
+	TeamsMsgJSON.title := tweetObj.user.name . " Tweeted:"
+	TeamsMsgJSON.summary := tweetObj.user.name . " shared a Tweet."
+	TeamsMsgJSON.themeColor := tweetObj.user.profile_link_color
+	TeamsMsgJSON.potentialAction[1].name := "Follow @" . tweetObj.user.screen_name
+	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name
+	TeamsMsgJSON.sections[1].facts[1].name := "Posted at:"
+	TeamsMsgJSON.sections[1].facts[1].value :=  tweetObj.created_at
+	TeamsMsgJSON.sections[1].text := tweetObj.text
+	
+	; Turn JSON object to string
+	TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
+
+	; Send message to teams webhook
+	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	whr.Open("POST", TeamsWebhookURL, true)
+	whr.SetRequestHeader("Content-Type", "application/json")
+	whr.Send(TeamsMsgJSONStr)
+	whr.WaitForResponse()
+}
+
+
 ; If setting file doesn't exist run first time setup
 if (!FileExist(SettingsName)) {
 	MsgBox, Thanks for downloading my tool! To use it, you must setup your details...
@@ -98,18 +133,12 @@ if (!FileExist(SettingsName)) {
 IniRead, TeamsWebhookURL, %SettingsName%, Settings, TeamsWebhookURL
 IniRead, TwitterScreenName, %SettingsName%, Settings, TwitterScreenName
 IniRead, TweetHashtag, %SettingsName%, Settings, TweetHashtag
-IniRead, LastTweetID, %SettingsName%, Settings, LastTweetID
 
 IniRead, ConsumerKey, %SettingsName%, Settings, ConsumerKey
 IniRead, ConsumerSecret, %SettingsName%, Settings, ConsumerSecret
 
-
-
-; ; Register hotkeys
-; Hotkey, ~$%EmailAddressKey%, EmailAddressKeyHandler
-; if (StrLen(EmployeeNumber) != 0) { ; Only register employee number if a valid string is set
-	; Hotkey, ~$%EmployeeNumberKey%, EmployeeNumberKeyHandler
-; }
+IniRead, LastTweetID, %SettingsName%, Vars, LastTweetID
+IniRead, TwitterAccessToken, %SettingsName%, Vars, TwitterAccessToken
 
 
 
@@ -135,14 +164,12 @@ b64Decode(string) {
 }
 
 
-; Authenticate using FreddieDevTweetMirror
-BearerTokenCredentials := ConsumerKey . ":" . ConsumerSecret
-BearerTokenCredentialsEncoded := b64Encode(BearerTokenCredentials)
-AuthString := "Basic " . BearerTokenCredentialsEncoded
+; Get Twitter app (FreddieDevTweetMirror) access token if none is cached
+if (TwitterAccessToken = error or StrLen(TwitterAccessToken) = 0) {
+	BearerTokenCredentials := ConsumerKey . ":" . ConsumerSecret
+	BearerTokenCredentialsEncoded := b64Encode(BearerTokenCredentials)
+	AuthString := "Basic " . BearerTokenCredentialsEncoded
 
-AuthorizationReply := "{""token_type"":""bearer"",""access_token"":""AAAAAAAAAAAAAAAAAAAAAAwqBAEAAAAAvoOYojwRfnToNnM2LjIwJd%2FEMRY%3Dw5ABRJbdjv2S88av30btX9CVijnu5Ep0Fr1qlJy7CXQe2mhIgd""}"
-
-if (StrLen(AuthorizationReply) = 0) {
 	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
 	whr.Open("POST", "https://api.twitter.com/oauth2/token", true)
 	whr.SetRequestHeader("Authorization", AuthString)
@@ -152,74 +179,40 @@ if (StrLen(AuthorizationReply) = 0) {
 	whr.WaitForResponse()
 	sleep 200
 	msgBody := whr.ResponseText
-	MsgBox, %msgBody%
 
-	AuthorizationReply = whr.ResponseText
+	authJSON := JSON.Load(msgBody)
+	
+	TwitterAccessToken := authJSON.access_token
+	IniWrite, %TwitterAccessToken%, %SettingsName%, Vars, TwitterAccessToken ; Cache
 }
 
 
-authJSON := JSON.Load(AuthorizationReply)
-
-accessToken := authJSON.access_token
 
 
 ; Get tweets
-TweetsURL := GetTweetsAPIURL("lloydjason94", "1195419706842324992")
-MyTweets := ProcessTwitterAPICall(accessToken, TweetsURL)
-MsgBox, %MyTweets%
+TweetsURL := GetTweetsAPIURL("lloydjason94", LastTweetID)
+MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
+MyTweets := JSON.Load(MyTweetsJSON) ; Convert JSON to object
 
-
-
-; Load teams card template JSON into object
-FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
-; Catch file load error
-if (ErrorLevel) {
-    MsgBox, TeamsCardTemplate.json couldn't be read!
+; Quit app if no new tweets found
+if (MyTweets.Length() = 0) {
 	ExitApp
 }
-TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
 
+; Process tweets
+MsgBox, %MyTweetsJSON%
+for index, tweet in MyTweets {
+    if (InStr(tweet.text, TweetHashtag)) {
+		MirrorTweetToTeams(TeamsWebhookURL, tweet)
+	}
+}
 
-; Twitter user vars:
-; profillePic := "https://pbs.twimg.com/profile_images/915234036771168256/eONTBzwz_normal.jpg" ; profile_image_url_https
-accountName := "Jason Lloyd" ; user.name
-screenName := "lloydjason94" ; user.screen_name
-tweetTheme := "1DA1F2" ; profile_link_color
-tweetDate := "Thu Nov 28 15:12:23 +0000 2019" ; created_at
-tweetBody := "Hello world #tweetmirror" ; text
+; Update last tweet ID
+LastTweetID := MyTweets[1].id
+IniWrite, %LastTweetID%, %SettingsName%, Vars, LastTweetID
 
-
-; Fill in template:
-TeamsMsgJSON.title := accountName . " Tweeted:"
-TeamsMsgJSON.summary := accountName . " shared a Tweet."
-TeamsMsgJSON.themeColor := tweetTheme
-TeamsMsgJSON.potentialAction[1].name := "Follow @" . screenName
-TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . screenName
-TeamsMsgJSON.sections[1].facts[1].name := "Posted at:"
-TeamsMsgJSON.sections[1].facts[1].value :=  tweetDate
-TeamsMsgJSON.sections[1].text := tweetBody
-
-TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
-
-; Send message to teams
-whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-whr.Open("POST", TeamsWebhookURL, true)
-whr.SetRequestHeader("Content-Type", "application/json")
-whr.Send(TeamsMsgJSONStr)
-whr.WaitForResponse()
 
 return ; Stop handlers running on script start
-
-
-
-;https://outlook.office.com/webhook/5e951759-27a0-4219-9be4-6f46778d984d@76a2ae5a-9f00-4f6b-95ed-5d33d77c4d61/IncomingWebhook/9b25608d3ca641cc8a5316952091908c/6fd7c3cf-a28e-4d02-9ac3-a213ffbe6829
-
-; TWEET:
-; 	"text"
-
-; "users"
-; 	"screen_name"
-; 	"profile_image_url_https"
 
 
 
