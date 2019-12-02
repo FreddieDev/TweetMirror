@@ -26,8 +26,11 @@ NextPoll := A_TickCount
 
 
 
+
+
 ; Cleanup tray menu items
 Menu, Tray, Tip, TweetMirror
+Menu, Tray, Icon, %DEFAULT_ICON%
 Menu, Tray, NoStandard
 
 ; Add change settings button
