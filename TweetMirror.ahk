@@ -70,13 +70,23 @@ ProcessTwitterAPICall(authtoken, url) {
 }
 
 
-FirstTimeSetup(SettingsName) {
+FirstTimeSetup(SettingsName, hasFallbackSettings) {
 	InputBox, TeamsWebhookURL, TweetMirror, Enter your MS Teams connector WebHook URL,,310,150,,,,,%TeamsWebhookURL%
+	if (ErrorLevel) ; User cancelled
+		GoTo, Aborted
 	InputBox, TwitterScreenName, TweetMirror, Enter your Twitter username,,310,150,,,,,@
+	if (ErrorLevel) ; User cancelled
+		GoTo, Aborted
 	InputBox, TweetHashtag, TweetMirror, Enter the hashtags you want to filter Tweets with,,310,150,,,,,#
+	if (ErrorLevel) ; User cancelled
+		GoTo, Aborted
 	
 	InputBox, ConsumerKey, TweetMirror, Enter your Twitter app's consumer key,,310,150
+	if (ErrorLevel) ; User cancelled
+		GoTo, Aborted
 	InputBox, ConsumerSecret, TweetMirror, Enter your Twitter app's consumer secret,,310,150
+	if (ErrorLevel) ; User cancelled
+		GoTo, Aborted
 	
 	; Strip unneeded characters
 	TwitterScreenName := StrReplace(TwitterScreenName, "@")
@@ -91,6 +101,14 @@ FirstTimeSetup(SettingsName) {
 	IniWrite, %ConsumerSecret%, %SettingsName%, Settings, ConsumerSecret
 	
 	MsgBox, Setup complete!
+	return
+	
+	Aborted:
+		; If user has no settings saved, force them to reconfigure
+		if (!hasFallbackSettings) {
+			FirstTimeSetup(SettingsName, hasFallbackSettings)
+		}
+		return
 }
 
 
@@ -210,7 +228,7 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 ; If setting file doesn't exist run first time setup
 if (!FileExist(SettingsName)) {
 	MsgBox, Thanks for downloading my tool! To use it, you must setup your details...
-	FirstTimeSetup(SettingsName)
+	FirstTimeSetup(SettingsName, false)
 }
 
 ; Load settings into global variables
@@ -266,7 +284,7 @@ MenuHandler:
 	} else if (A_ThisMenuItem = MenuExitScriptText) {
 		ExitApp
 	} else if (A_ThisMenuItem = MenuChangeSettingsText) {
-		FirstTimeSetup(SettingsName)
+		FirstTimeSetup(SettingsName, true)
 	}
 
 	return

@@ -18,6 +18,8 @@ Detects new tweets that contain a desired hashtag to forward them onto MS Teams 
 1. Click [here](../../archive/master.zip) to download the app
 2. Unzip the file
 3. Run `install.bat`
+4. Fill in all the prompted fields
+	- If you've made mistakes, right click the tray icon and select "Change Settings" to reconfigure
 4. You can now delete the downloaded files to cleanup
 
 
