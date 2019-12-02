@@ -51,7 +51,7 @@ GetTweetsAPIURL(username, sinceTweetID) {
 		sinceTweetSetting = &since_id=%sinceTweetID%
 	}
 
-	return "https://api.twitter.com/1.1/statuses/user_timeline.json?trim_user=true&include_rts=false&count=200" . "&screen_name=" . username . sinceTweetSetting
+	return "https://api.twitter.com/1.1/statuses/user_timeline.json?trim_user=false&include_rts=false&count=200" . "&screen_name=" . username . sinceTweetSetting
 }
 
 
@@ -107,7 +107,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	TeamsMsgJSON.themeColor := tweetObj.user.profile_link_color
 	TeamsMsgJSON.potentialAction[1].name := "Follow @" . tweetObj.user.screen_name
 	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name
-	TeamsMsgJSON.sections[1].facts[1].name := "Posted at:"
+	TeamsMsgJSON.sections[1].facts[1].name := "Date:"
 	TeamsMsgJSON.sections[1].facts[1].value :=  tweetObj.created_at
 	TeamsMsgJSON.sections[1].text := tweetObj.text
 	
@@ -199,8 +199,8 @@ if (MyTweets.Length() = 0) {
 	ExitApp
 }
 
+
 ; Process tweets
-MsgBox, %MyTweetsJSON%
 for index, tweet in MyTweets {
     if (InStr(tweet.text, TweetHashtag)) {
 		MirrorTweetToTeams(TeamsWebhookURL, tweet)
