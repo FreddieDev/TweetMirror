@@ -105,6 +105,30 @@ ProcessTwitterAPICall(authtoken, url) {
 	; Hotkey, ~$%EmployeeNumberKey%, EmployeeNumberKeyHandler
 ; }
 
+FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
+; Catch file load error
+if (ErrorLevel) {
+    MsgBox, TeamsCardTemplate.json couldn't be read!
+	ExitApp
+}
+
+TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
+
+
+; Twitter user vars:
+profillePic := "https://pbs.twimg.com/profile_images/915234036771168256/eONTBzwz_normal.jpg" ;"profile_image_url_https"
+screenName := "lloydjason94"
+
+; Fill in template:
+TeamsMsgJSON[1].columns[1].items[1].url = profillePic
+TeamsMsgJSON[1].columns[2].items[1].text = "**Jason LLoyd Tweeted:**"
+TeamsMsgJSON[1].columns[2].items[2].text = "hello world tweet body"
+TeamsMsgJSON[2].items[1].columns[2].items[1].actions.title = "Follow @" . screenName
+TeamsMsgJSON[2].items[1].columns[2].items[1].actions.url = "hello world tweet body"
+
+TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
+
+return
 
 
 ; Base64 helper functions
