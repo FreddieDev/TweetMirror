@@ -166,6 +166,15 @@ return ; Stop handlers running on script start
 
 
 
+;https://outlook.office.com/webhook/5e951759-27a0-4219-9be4-6f46778d984d@76a2ae5a-9f00-4f6b-95ed-5d33d77c4d61/IncomingWebhook/9b25608d3ca641cc8a5316952091908c/6fd7c3cf-a28e-4d02-9ac3-a213ffbe6829
+
+; TWEET:
+; 	"text"
+
+; "users"
+; 	"screen_name"
+; 	"profile_image_url_https"
+
 
 
 
