@@ -282,6 +282,7 @@ Loop {
 	NextPoll += PollRate
 	
 	; Check for new tweets
+	IniRead, LastTweetID, %SettingsName%, Vars, LastTweetID
 	ProcessSuccessful := ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, TeamsWebhookURL, SettingsName)
 	
 	if (!ProcessSuccessful) {
