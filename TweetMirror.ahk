@@ -207,14 +207,26 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
 		return true
 	}
-
+	
 	; Process new tweets
-	for index, tweet in MyTweets {
+	counter := newTweetCount
+	Loop %newTweetCount% {
+		tweet := MyTweets[counter]
+		
 		; If tweet contains desired hashtag, forward to MS Teams
 		if (InStr(tweet.text, TweetHashtag)) {
 			MirrorTweetToTeams(TeamsWebhookURL, tweet)
 		}
+		
+		counter--
 	}
+	; ; Process new tweets
+	; for index, tweet in MyTweets {
+		; ; If tweet contains desired hashtag, forward to MS Teams
+		; if (InStr(tweet.text, TweetHashtag)) {
+			; MirrorTweetToTeams(TeamsWebhookURL, tweet)
+		; }
+	; }
 	Menu, Tray, Tip, %newTweetCount% new #%TweetHashtag% Tweet(s) recently mirrored!
 
 	; Update last processed tweet ID
