@@ -220,10 +220,10 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 		tweet := MyTweets[counter]
 		
 		; If tweet contains desired hashtag, forward to MS Teams
-		hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
-		RegexMatch(tweet.full_text, hashtagRegex, hashtagFound)
-
-		if (hashtagFound = "#" . TweetHashtag) {
+		hashtagRegex := "i)\B#" . TweetHashtag . "(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
+		foundPos := RegexMatch(tweet.full_text, hashtagRegex, hashtagFound)
+		
+		if (foundPos) {
 			MirrorTweetToTeams(TeamsWebhookURL, tweet)
 			mirroredTweets++
 		}
@@ -233,7 +233,10 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 	
 	; Update tray tooltip text
 	if (mirroredTweets) {
-		Menu, Tray, Tip, %newTweetCount% new #%TweetHashtag% Tweet(s) recently mirrored!
+		plural := ""
+		if (mirroredTweets > 1)
+			plural := "s"
+		Menu, Tray, Tip, %mirroredTweets% new #%TweetHashtag% Tweet%plural% recently mirrored!
 	} else {
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
 		return true
