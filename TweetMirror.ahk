@@ -28,7 +28,6 @@ NextPoll := A_TickCount
 
 
 
-
 ; Cleanup tray menu items
 Menu, Tray, Tip, TweetMirror
 Menu, Tray, Icon, %DEFAULT_ICON%
@@ -136,12 +135,16 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(tweetObj.full_text)
 	
 	; Process URLs in message
-	urlsRegex := "i)[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?"
-	newText := RegExReplace(tweetObj.full_text, urlsRegex, "[https://t.co/$1](https://t.co/$1)")
+	newText := tweetObj.full_text
+	for index, urlObj in tweetObj.entities.urls {
+		newText := StrReplace(newText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . urlObj.expanded_url . ")")
+	}
 	
 	; Process hashtags in message
-	hashtagsRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)"
-	newText := RegExReplace(newText, hashtagsRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
+	hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
+	newText := RegExReplace(newText, hashtagRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
+
+	; Save new tweet text to object
 	TeamsMsgJSON.sections[1].text := newText
 	
 	; Turn JSON object to string
@@ -217,7 +220,10 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 		tweet := MyTweets[counter]
 		
 		; If tweet contains desired hashtag, forward to MS Teams
-		if (InStr(tweet.full_text, TweetHashtag)) {
+		hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
+		RegexMatch(tweet.full_text, hashtagRegex, hashtagFound)
+
+		if (hashtagFound = "#" . TweetHashtag) {
 			MirrorTweetToTeams(TeamsWebhookURL, tweet)
 			mirroredTweets++
 		}
@@ -226,7 +232,7 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 	}
 	
 	; Update tray tooltip text
-	if (mirroredTweets != 0) {
+	if (mirroredTweets) {
 		Menu, Tray, Tip, %newTweetCount% new #%TweetHashtag% Tweet(s) recently mirrored!
 	} else {
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
