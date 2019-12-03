@@ -128,24 +128,24 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	}
 	TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
 	
-	; Fill in template:
-	TeamsMsgJSON.title := tweetObj.user.name . " Tweeted:"
-	TeamsMsgJSON.summary := tweetObj.user.name . " shared a Tweet."
-	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name . "/status/" . tweetObj.id
-	TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(tweetObj.full_text)
-	
 	; Process URLs in message
-	newText := tweetObj.full_text
+	copyText := tweetObj.full_text
+	markdownText := tweetObj.full_text
 	for index, urlObj in tweetObj.entities.urls {
-		newText := StrReplace(newText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . urlObj.expanded_url . ")")
+		markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . urlObj.expanded_url . ")")
+		copyText := StrReplace(copyText, urlObj.url, urlObj.display_url)
 	}
 	
 	; Process hashtags in message
 	hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
-	newText := RegExReplace(newText, hashtagRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
+	markdownText := RegExReplace(markdownText, hashtagRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
 
-	; Save new tweet text to object
-	TeamsMsgJSON.sections[1].text := newText
+	; Fill in template:
+	TeamsMsgJSON.title := tweetObj.user.name . " Tweeted:"
+	TeamsMsgJSON.summary := tweetObj.user.name . " shared a Tweet."
+	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name . "/status/" . tweetObj.id
+	TeamsMsgJSON.sections[1].text := markdownText
+	TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(copyText)
 	
 	; Turn JSON object to string
 	TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
