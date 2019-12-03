@@ -194,7 +194,6 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 	MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
 	MyTweets := JSON.Load(MyTweetsJSON) ; Convert JSON to object
 	
-	
 	; Check if Twitter blocked the call
 	if (MyTweets.errors) {
 		errorMsg := MyTweets.errors[1].message
