@@ -5,8 +5,8 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 SettingsName := "TweetMirror.ini"
 
-#Include JSON.ahk
-#Include lib.ahk
+#Include lib\JSON.ahk
+#Include lib\lib.ahk
 
 ; Global vars (leave empty)
 TeamsWebhookURL :=
@@ -19,6 +19,7 @@ TwitterAccessToken :=
 
 ; Global vars (hard-coded settings)
 PollRate := 30000 ; How frequently to check for new tweets
+MaxSearchedTweets := 20 ; The maximum amount of Tweets to look through
 ERROR_ICON := 78
 LOADING_ICON := 239
 DEFAULT_ICON := StrReplace(A_ScriptFullPath, ".ahk", ".exe")
@@ -57,8 +58,9 @@ GetTweetsAPIURL(username, sinceTweetID) {
 	if (sinceTweetID != "ERROR" and StrLen(sinceTweetID) != 0) {
 		sinceTweetSetting = &since_id=%sinceTweetID%
 	}
-
-	return "https://api.twitter.com/1.1/statuses/user_timeline.json?trim_user=false&include_rts=false&count=200" . "&screen_name=" . username . sinceTweetSetting
+	
+	apiUrl := "https://api.twitter.com/1.1/statuses/user_timeline.json"
+	return apiUrl . "?trim_user=false&include_rts=false&tweet_mode=extended" . "&screen_name=" . username . "&count=" . MaxSearchedTweets . sinceTweetSetting
 }
 
 
@@ -126,16 +128,16 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		return
 	}
 	TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
-
+	
 	; Fill in template:
 	TeamsMsgJSON.title := tweetObj.user.name . " Tweeted:"
 	TeamsMsgJSON.summary := tweetObj.user.name . " shared a Tweet."
 	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name . "/status/" . tweetObj.id
-	TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(tweetObj.text)
+	TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(tweetObj.full_text)
 	
 	; Process URLs in message
 	urlsRegex := "i)[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?"
-	newText := RegExReplace(tweetObj.text, urlsRegex, "[https://t.co/$1](https://t.co/$1)")
+	newText := RegExReplace(tweetObj.full_text, urlsRegex, "[https://t.co/$1](https://t.co/$1)")
 	
 	; Process hashtags in message
 	hashtagsRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)"
@@ -210,24 +212,26 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 	
 	; Process new tweets
 	counter := newTweetCount
+	mirroredTweets := 0
 	Loop %newTweetCount% {
 		tweet := MyTweets[counter]
 		
 		; If tweet contains desired hashtag, forward to MS Teams
-		if (InStr(tweet.text, TweetHashtag)) {
+		if (InStr(tweet.full_text, TweetHashtag)) {
 			MirrorTweetToTeams(TeamsWebhookURL, tweet)
+			mirroredTweets++
 		}
 		
 		counter--
 	}
-	; ; Process new tweets
-	; for index, tweet in MyTweets {
-		; ; If tweet contains desired hashtag, forward to MS Teams
-		; if (InStr(tweet.text, TweetHashtag)) {
-			; MirrorTweetToTeams(TeamsWebhookURL, tweet)
-		; }
-	; }
-	Menu, Tray, Tip, %newTweetCount% new #%TweetHashtag% Tweet(s) recently mirrored!
+	
+	; Update tray tooltip text
+	if (mirroredTweets != 0) {
+		Menu, Tray, Tip, %newTweetCount% new #%TweetHashtag% Tweet(s) recently mirrored!
+	} else {
+		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
+		return true
+	}
 
 	; Update last processed tweet ID
 	; This speeds up future calls to Twitter API and tweet processing
