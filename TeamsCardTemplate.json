@@ -1,6 +1,6 @@
 {
-    "@context": "https://schema.org/extensions",
     "@type": "MessageCard",
+    "@context": "https://schema.org/extensions",
     "title": "XXX Tweeted:",
     "summary": "XXX shared a Tweet",
     "themeColor": "8000e8",

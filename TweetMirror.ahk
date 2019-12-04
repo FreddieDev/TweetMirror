@@ -120,7 +120,9 @@ FirstTimeSetup(SettingsName, hasFallbackSettings) {
 MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	
 	; Load teams card template JSON into object
+	; Useful card builder: https://messagecardplayground.azurewebsites.net/
 	FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
+	
 	; Catch file load error
 	if (ErrorLevel) {
 		throw Exception("TeamsCardTemplate.json couldn't be read!", -1)
@@ -196,7 +198,13 @@ GetSecondsUntilNextCheck(NextPoll) {
 ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, TeamsWebhookURL, SettingsName) {
 	; Get tweets
 	TweetsURL := GetTweetsAPIURL("lloydjason94", LastTweetID)
-	MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
+	MyTweetsJSON :=
+	try {
+		MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
+	} catch e {
+		Menu, Tray, Tip, TweetMirror error: %e%
+		return false
+	}
 	MyTweets := JSON.Load(MyTweetsJSON) ; Convert JSON to object
 	
 	; Check if Twitter blocked the call
@@ -241,7 +249,7 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
 		return true
 	}
-
+	
 	; Update last processed tweet ID
 	; This speeds up future calls to Twitter API and tweet processing
 	LastTweetID := MyTweets[1].id
@@ -290,8 +298,7 @@ Loop {
 	
 	if (!ProcessSuccessful) {
 		Menu, Tray, Icon, shell32.dll, %ERROR_ICON%
-		
-		MsgBox, Error occurred when polling Twitter... regenerating auth key.
+		Menu, Tray, Tip, Error occurred when polling Twitter... regenerating auth key.
 		TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
 	} else {
 		Menu, Tray, Icon, %DEFAULT_ICON% ; Restore default icon
