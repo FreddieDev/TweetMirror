@@ -17,7 +17,7 @@
         },
 		{
             "@type": "OpenUri",
-            "name": "Copy Tweet",
+            "name": "Repost Tweet",
             "targets": [
                 {
                     "os": "default",

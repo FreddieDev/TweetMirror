@@ -65,10 +65,15 @@ GetTweetsAPIURL(username, sinceTweetID) {
 
 ; Runs a get request and returns the data
 ProcessTwitterAPICall(authtoken, url) {
-  http := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-  http.Open("GET", url, false)
-  http.SetRequestHeader("Authorization", "Bearer " + authtoken)
-  http.Send()
+	try {
+		http := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+		http.Open("GET", url, false)
+		http.SetRequestHeader("Authorization", "Bearer " + authtoken)
+		http.Send()
+	} catch e {
+		Menu, Tray, Tip, TweetMirror error: %e%
+		return false
+	}
   
   return % http.ResponseText
 }
@@ -198,13 +203,9 @@ GetSecondsUntilNextCheck(NextPoll) {
 ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, TeamsWebhookURL, SettingsName) {
 	; Get tweets
 	TweetsURL := GetTweetsAPIURL("lloydjason94", LastTweetID)
-	MyTweetsJSON :=
-	try {
-		MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
-	} catch e {
-		Menu, Tray, Tip, TweetMirror error: %e%
+	MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
+	if (!MyTweetsJSON)
 		return false
-	}
 	MyTweets := JSON.Load(MyTweetsJSON) ; Convert JSON to object
 	
 	; Check if Twitter blocked the call
