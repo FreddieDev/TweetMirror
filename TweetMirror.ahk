@@ -127,6 +127,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	
 	; Load teams card template JSON into object
 	; Useful card builder: https://messagecardplayground.azurewebsites.net/
+	;  Examples used: TINYPulse & Trello update
 	FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
 	
 	; Catch file load error
