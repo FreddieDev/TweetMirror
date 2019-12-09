@@ -1,41 +1,130 @@
 {
-    "@type": "MessageCard",
-    "@context": "https://schema.org/extensions",
-    "title": "XXX Tweeted:",
-    "summary": "XXX shared a Tweet",
-    "themeColor": "8000e8",
-    "potentialAction": [
+    "type": "AdaptiveCard",
+    "body": [
         {
-            "@type": "OpenUri",
-            "name": "View on Twitter",
-            "targets": [
+            "type": "Container",
+            "style": "emphasis",
+            "items": [
                 {
-                    "os": "default",
-                    "uri": "https://twitter.com/"
+                    "type": "TextBlock",
+                    "horizontalAlignment": "Left",
+                    "color": "Dark",
+                    "text": "Jason Lloyd Tweeted:",
+                    "wrap": true
                 }
-            ]
+            ],
+            "padding": "Default",
+            "spacing": "None"
         },
-		{
-            "@type": "OpenUri",
-            "name": "Repost Tweet",
-            "targets": [
+        {
+            "type": "Container",
+            "separator": true,
+            "items": [
                 {
-                    "os": "default",
-                    "uri": "https://twitter.com/intent/tweet?text=hello%20world"
+                    "type": "TextBlock",
+                    "id": "c7111fd1-4751-2116-a443-95cffcf926e8",
+                    "text": "Preview URL test [https://google.com](https://google.com)",
+                    "wrap": true
+                },
+                {
+                    "type": "Container",
+                    "items": [
+                        {
+                            "type": "ColumnSet",
+                            "columns": [
+                                {
+                                    "type": "Column",
+                                    "items": [
+                                        {
+                                            "type": "Image",
+                                            "horizontalAlignment": "Center",
+                                            "url": "https://www.google.com/s2/favicons?domain_url=youtube.com",
+                                            "size": "Small",
+                                            "width": "16px",
+                                            "height": "16px"
+                                        }
+                                    ],
+                                    "width": "auto",
+                                    "padding": "None",
+                                    "verticalContentAlignment": "Center"
+                                },
+                                {
+                                    "type": "Column",
+                                    "items": [
+                                        {
+                                            "type": "TextBlock",
+                                            "weight": "Bolder",
+                                            "text": "YouTube",
+                                            "wrap": true
+                                        },
+                                        {
+                                            "type": "TextBlock",
+                                            "spacing": "None",
+                                            "color": "Light",
+                                            "text": "youtube.com",
+                                            "wrap": true,
+                                            "size": "Small"
+                                        },
+                                        {
+                                            "type": "TextBlock",
+                                            "spacing": "None",
+                                            "color": "Light",
+                                            "text": "Page description",
+                                            "wrap": true,
+                                            "size": "Small"
+                                        }
+                                    ],
+                                    "width": "stretch",
+                                    "padding": "Small",
+                                    "spacing": "None"
+                                }
+                            ],
+                            "padding": "None"
+                        }
+                    ],
+                    "padding": "None",
+                    "selectAction": {
+                        "type": "Action.OpenUrl",
+                        "url": "https://youtube.com"
+                    }
                 }
-            ]
+            ],
+            "padding": {
+                "top": "Default",
+                "bottom": "None",
+                "left": "Default",
+                "right": "Default"
+            },
+            "spacing": "None"
+        },
+        {
+            "type": "Container",
+            "id": "466ee0a4-b5ba-520e-0b5d-53841fffe66e",
+            "padding": "Default",
+            "items": [
+                {
+                    "type": "ActionSet",
+                    "spacing": "None",
+                    "actions": [
+                        {
+                            "type": "Action.OpenUrl",
+                            "id": "",
+                            "title": "View on Twitter",
+                            "url": "https://twitter.com"
+                        },
+                        {
+                            "type": "Action.OpenUrl",
+                            "id": "",
+                            "title": "Repost Tweet",
+                            "url": "https://twitter.com"
+                        }
+                    ]
+                }
+            ],
+            "spacing": "None"
         }
     ],
-    "sections": [
-        {
-            "text": "Hello world #TweetMirror"
-        },
-		{
-			"startGroup": true,
-			"activityImage": "https://www.google.com/s2/favicons?domain_url=youtube.com",
-			"activityImageStyle": "normal",
-			"activityTitle": "**YouTube**",
-			"activityText": "https://www.youtube.com/"
-		}
-    ]
+    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+    "version": "1.0",
+    "padding": "None"
 }

@@ -137,50 +137,50 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	}
 	TeamsMsgJSON := JSON.Load(TeamsMsgTemplate)
 	
-	; Process URLs in message
-	copyText := tweetObj.full_text
-	markdownText := tweetObj.full_text
-	for index, urlObj in tweetObj.entities.urls {
-		markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . urlObj.expanded_url . ")")
-		copyText := StrReplace(copyText, urlObj.url, urlObj.display_url)
-	}
+	; ; Process URLs in message
+	; copyText := tweetObj.full_text
+	; markdownText := tweetObj.full_text
+	; for index, urlObj in tweetObj.entities.urls {
+		; markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . urlObj.expanded_url . ")")
+		; copyText := StrReplace(copyText, urlObj.url, urlObj.display_url)
+	; }
 	
-	; Fill URL preview area
-	urlCount := tweetObj.entities.urls.length()
-	if (urlCount = 0) {
-		TeamsMsgJSON.sections[2] := []
-	} else {
-		targetURL := StrReplace(tweetObj.entities.urls[1].expanded_url, "\/", "/")
+	; ; Fill URL preview area
+	; urlCount := tweetObj.entities.urls.length()
+	; if (urlCount = 0) {
+		; TeamsMsgJSON.sections[2] := []
+	; } else {
+		; targetURL := StrReplace(tweetObj.entities.urls[1].expanded_url, "\/", "/")
 		
-		; Extract metadata from URL
-		metaHandler := New MetaFromURL(targetURL)
-		pageTitle := metaHandler.GetPageTitle()
-		pageDesription := metaHandler.GetPageDescription()
-		metaHandler.Quit()
+		; ; Extract metadata from URL
+		; metaHandler := New MetaFromURL(targetURL)
+		; pageTitle := metaHandler.GetPageTitle()
+		; pageDesription := metaHandler.GetPageDescription()
+		; metaHandler.Quit()
 		
-		; Fill default meta if required
-		if (StrLen(pageTitle) < 3)
-			pageTitle := tweetObj.entities.urls[1].display_url
-		if (StrLen(pageDesription) < 3)
-			pageDesription := "No description."
+		; ; Fill default meta if required
+		; if (StrLen(pageTitle) < 3)
+			; pageTitle := tweetObj.entities.urls[1].display_url
+		; if (StrLen(pageDesription) < 3)
+			; pageDesription := "No description."
 		
 
-		; Populate template
-		TeamsMsgJSON.sections[2].activityImage := "https://www.google.com/s2/favicons?domain_url=" . targetURL ; Use Google's favicon finder site to get icon
-		TeamsMsgJSON.sections[2].activityTitle := pageTitle
-		TeamsMsgJSON.sections[2].activityText := pageDesription
-	}
+		; ; Populate template
+		; TeamsMsgJSON.sections[2].activityImage := "https://www.google.com/s2/favicons?domain_url=" . targetURL ; Use Google's favicon finder site to get icon
+		; TeamsMsgJSON.sections[2].activityTitle := pageTitle
+		; TeamsMsgJSON.sections[2].activityText := pageDesription
+	; }
 	
-	; Process hashtags in message
-	hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
-	markdownText := RegExReplace(markdownText, hashtagRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
+	; ; Process hashtags in message
+	; hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
+	; markdownText := RegExReplace(markdownText, hashtagRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
 
-	; Fill in template:
+	; ; Fill in template:
 	TeamsMsgJSON.title := tweetObj.user.name . " Tweeted:"
 	TeamsMsgJSON.summary := tweetObj.user.name . " shared a Tweet."
-	TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name . "/status/" . tweetObj.id
-	TeamsMsgJSON.sections[1].text := markdownText
-	TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(copyText)
+	; TeamsMsgJSON.potentialAction[1].targets[1].uri := "https://twitter.com/" . tweetObj.user.screen_name . "/status/" . tweetObj.id
+	; TeamsMsgJSON.sections[1].text := markdownText
+	; TeamsMsgJSON.potentialAction[2].targets[1].uri := "https://twitter.com/intent/tweet?text=" . UriEncode(copyText)
 	
 	; Turn JSON object to string
 	TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
@@ -191,6 +191,10 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	whr.SetRequestHeader("Content-Type", "application/json")
 	whr.Send(TeamsMsgJSONStr)
 	whr.WaitForResponse()
+	
+	teamsReply := whr.ResponseText
+	if (teamsReply != "1")
+		MsgBox, "Error posting in Teams: " . teamsReply
 }
 
 
