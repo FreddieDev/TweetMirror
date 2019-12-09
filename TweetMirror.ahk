@@ -5,8 +5,9 @@ SendMode Input  ; Recommended for new scripts due to its superior speed and reli
 SetWorkingDir %A_ScriptDir%  ; Ensures a consistent starting directory.
 SettingsName := "TweetMirror.ini"
 
-#Include lib\JSON.ahk
 #Include lib\lib.ahk
+#Include lib\JSON.ahk
+#Include lib\MetaFromURL.ahk
 
 ; Global vars (leave empty)
 TeamsWebhookURL :=
@@ -143,6 +144,32 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		copyText := StrReplace(copyText, urlObj.url, urlObj.display_url)
 	}
 	
+	; Fill URL preview area
+	urlCount := tweetObj.entities.urls.length()
+	if (urlCount = 0) {
+		TeamsMsgJSON.sections[2] := []
+	} else {
+		targetURL := StrReplace(tweetObj.entities.urls[1].expanded_url, "\/", "/")
+		
+		; Extract metadata from URL
+		metaHandler := New MetaFromURL(targetURL)
+		pageTitle := metaHandler.GetPageTitle()
+		pageDesription := metaHandler.GetPageDescription()
+		metaHandler.Quit()
+		
+		; Fill default meta if required
+		if (StrLen(pageTitle) < 3)
+			pageTitle := tweetObj.entities.urls[1].display_url
+		if (StrLen(pageDesription) < 3)
+			pageDesription := "No description."
+		
+
+		; Populate template
+		TeamsMsgJSON.sections[2].activityImage := "https://www.google.com/s2/favicons?domain_url=" . targetURL ; Use Google's favicon finder site to get icon
+		TeamsMsgJSON.sections[2].activityTitle := pageTitle
+		TeamsMsgJSON.sections[2].activityText := pageDesription
+	}
+	
 	; Process hashtags in message
 	hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
 	markdownText := RegExReplace(markdownText, hashtagRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
@@ -250,6 +277,7 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
 		return true
 	}
+	MsgBox, Mirrored
 	
 	; Update last processed tweet ID
 	; This speeds up future calls to Twitter API and tweet processing
