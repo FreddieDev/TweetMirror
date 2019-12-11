@@ -35,8 +35,11 @@
 		global
 		
 		; Strip unneeded characters
-		TwitterScreenName := StrReplace(TwitterScreenName, "@")
-		TweetHashtag := StrReplace(TweetHashtag, "#")
+		TwitterScreenName := Trim(StrReplace(TwitterScreenName, "@"))
+		TweetHashtag := Trim(StrReplace(TweetHashtag, "#"))
+		ConsumerKey := Trim(ConsumerKey)
+		ConsumerSecret := Trim(ConsumerSecret)
+		ConsumerSecret := Trim(TeamsWebhookURL)
 		
 		; Write user's settings
 		IniWrite, %TeamsWebhookURL%, %SettingsName%, Settings, TeamsWebhookURL
