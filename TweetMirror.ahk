@@ -8,15 +8,16 @@ SettingsName := "TweetMirror.ini"
 #Include lib\lib.ahk
 #Include lib\JSON.ahk
 #Include lib\MetaFromURL.ahk
+#Include lib\Settings.ahk
 
-; Global vars (leave empty)
-TeamsWebhookURL :=
-TwitterScreenName :=
-TweetHashtag :=
-ConsumerKey :=
-ConsumerSecret :=
-LastTweetID :=
-TwitterAccessToken :=
+; Global vars (leave empty, `global` shares them with included scripts)
+global TeamsWebhookURL :=
+global TwitterScreenName :=
+global TweetHashtag :=
+global ConsumerKey :=
+global ConsumerSecret :=
+global LastTweetID :=
+global TwitterAccessToken :=
 
 ; Global vars (hard-coded settings)
 PollRate := 30000 ; How frequently to check for new tweets
@@ -77,48 +78,6 @@ ProcessTwitterAPICall(authtoken, url) {
 	}
   
   return % http.ResponseText
-}
-
-
-FirstTimeSetup(SettingsName, hasFallbackSettings) {
-	InputBox, TeamsWebhookURL, TweetMirror, Enter your MS Teams connector WebHook URL,,310,150,,,,,%TeamsWebhookURL%
-	if (ErrorLevel) ; User cancelled
-		GoTo, Aborted
-	InputBox, TwitterScreenName, TweetMirror, Enter your Twitter username,,310,150,,,,,@
-	if (ErrorLevel) ; User cancelled
-		GoTo, Aborted
-	InputBox, TweetHashtag, TweetMirror, Enter the hashtags you want to filter Tweets with,,310,150,,,,,#
-	if (ErrorLevel) ; User cancelled
-		GoTo, Aborted
-	
-	InputBox, ConsumerKey, TweetMirror, Enter your Twitter app's consumer key,,310,150
-	if (ErrorLevel) ; User cancelled
-		GoTo, Aborted
-	InputBox, ConsumerSecret, TweetMirror, Enter your Twitter app's consumer secret,,310,150
-	if (ErrorLevel) ; User cancelled
-		GoTo, Aborted
-	
-	; Strip unneeded characters
-	TwitterScreenName := StrReplace(TwitterScreenName, "@")
-	TweetHashtag := StrReplace(TweetHashtag, "#")
-	
-	; Write user's settings
-	IniWrite, %TeamsWebhookURL%, %SettingsName%, Settings, TeamsWebhookURL
-	IniWrite, %TwitterScreenName%, %SettingsName%, Settings, TwitterScreenName
-	IniWrite, %TweetHashtag%, %SettingsName%, Settings, TweetHashtag
-	
-	IniWrite, %ConsumerKey%, %SettingsName%, Settings, ConsumerKey
-	IniWrite, %ConsumerSecret%, %SettingsName%, Settings, ConsumerSecret
-	
-	MsgBox, Setup complete!
-	return
-	
-	Aborted:
-		; If user has no settings saved, force them to reconfigure
-		if (!hasFallbackSettings) {
-			FirstTimeSetup(SettingsName, hasFallbackSettings)
-		}
-		return
 }
 
 
@@ -232,7 +191,9 @@ GetSecondsUntilNextCheck(NextPoll) {
 
 ; Checks for new Tweets and appropriate ones to MS Teams
 ; Returns true if check was successful (no errors)
-ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, TeamsWebhookURL, SettingsName) {
+ProcessTwitterUpdates() {
+	global
+	
 	; Get tweets
 	TweetsURL := GetTweetsAPIURL("lloydjason94", LastTweetID)
 	MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
@@ -293,54 +254,61 @@ ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, T
 
 
 
+
+StartTweetMirror() {
+	global
+	
+	; Get Twitter app (FreddieDevTweetMirror) access token if none is cached
+	if (TwitterAccessToken = error or StrLen(TwitterAccessToken) = 0) {
+		TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+	}
+
+	; Endlessly run checks for new tweets
+	Loop {
+		Menu, Tray, Icon, shell32.dll, %LOADING_ICON%
+		
+		; Add time to next poll time
+		NextPoll += PollRate
+		
+		; Check for new tweets
+		IniRead, LastTweetID, %SettingsName%, Vars, LastTweetID
+		ProcessSuccessful := ProcessTwitterUpdates()
+		
+		if (!ProcessSuccessful) {
+			Menu, Tray, Icon, shell32.dll, %ERROR_ICON%
+			Menu, Tray, Tip, Error occurred when polling Twitter... regenerating auth key.
+			TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+		} else {
+			Menu, Tray, Icon, %DEFAULT_ICON% ; Restore default icon
+		}
+		
+		Sleep, PollRate
+	}
+}
+
+
 ; If setting file doesn't exist run first time setup
 if (!FileExist(SettingsName)) {
 	MsgBox, Thanks for downloading my tool! To use it, you must setup your details...
-	FirstTimeSetup(SettingsName, false)
+	Settings.Change()
+} else {
+	Settings.Load()
+	StartTweetMirror()
 }
 
-; Load settings into global variables
-IniRead, TeamsWebhookURL, %SettingsName%, Settings, TeamsWebhookURL
-IniRead, TwitterScreenName, %SettingsName%, Settings, TwitterScreenName
-IniRead, TweetHashtag, %SettingsName%, Settings, TweetHashtag
-
-IniRead, ConsumerKey, %SettingsName%, Settings, ConsumerKey
-IniRead, ConsumerSecret, %SettingsName%, Settings, ConsumerSecret
-
-IniRead, LastTweetID, %SettingsName%, Vars, LastTweetID
-IniRead, TwitterAccessToken, %SettingsName%, Vars, TwitterAccessToken
-
-
-
-
-; Get Twitter app (FreddieDevTweetMirror) access token if none is cached
-if (TwitterAccessToken = error or StrLen(TwitterAccessToken) = 0) {
-	TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
-}
-
-; Endlessly run checks for new tweets
-Loop {
-	Menu, Tray, Icon, shell32.dll, %LOADING_ICON%
-	
-	; Add time to next poll time
-	NextPoll += PollRate
-	
-	; Check for new tweets
-	IniRead, LastTweetID, %SettingsName%, Vars, LastTweetID
-	ProcessSuccessful := ProcessTwitterUpdates(NextPoll, TwitterAccessToken, LastTweetID, TweetHashtag, TeamsWebhookURL, SettingsName)
-	
-	if (!ProcessSuccessful) {
-		Menu, Tray, Icon, shell32.dll, %ERROR_ICON%
-		Menu, Tray, Tip, Error occurred when polling Twitter... regenerating auth key.
-		TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
-	} else {
-		Menu, Tray, Icon, %DEFAULT_ICON% ; Restore default icon
-	}
-	
-	Sleep, PollRate
-}
 
 return ; Stop handlers running on script start
+
+
+GuiClose:
+	Gui, Destroy
+	return
+
+ButtonSave:
+	Gui, Submit ; Save the input from the user to each control's associated variable.
+	Settings.Save()
+	Gui, Destroy
+	return
 
 
 
@@ -352,7 +320,8 @@ MenuHandler:
 	} else if (A_ThisMenuItem = MenuExitScriptText) {
 		ExitApp
 	} else if (A_ThisMenuItem = MenuChangeSettingsText) {
-		FirstTimeSetup(SettingsName, true)
+		; FirstTimeSetup(SettingsName, true)
+		Settings.Change()
 	}
 
 	return
