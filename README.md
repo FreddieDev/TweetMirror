@@ -23,8 +23,15 @@ Detects new tweets that contain a desired hashtag to forward them onto MS Teams 
 4. You can now delete the downloaded files to cleanup
 
 
-## Removing the script
+### Disabing startup launch
+By default, TweetMirror launches on startup. This can be disabled via the startup tab in Task Manager.
+
+### Removing the script
 Download and run `uninstall.bat`
 
-## Disabing startup launch
-By default, TweetMirror launches on startup. This can be disabled via the startup tab in Task Manager.
+
+## Developing
+To recompile the exe:
+1. Install [AutoHotkey](https://www.autohotkey.com/)
+2. Reboot (if step 3 fails)
+3. Right click the `.ahk` and select "Compile Script"
