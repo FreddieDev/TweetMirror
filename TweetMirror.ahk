@@ -253,14 +253,21 @@ ProcessTwitterUpdates() {
 }
 
 
-
+ShowError(msg) {
+	Menu, Tray, Icon, shell32.dll, %ERROR_ICON%
+	Menu, Tray, Tip, %msg%
+}
 
 StartTweetMirror() {
 	global
 	
 	; Get Twitter app (FreddieDevTweetMirror) access token if none is cached
 	if (TwitterAccessToken = error or StrLen(TwitterAccessToken) = 0) {
-		TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+		try {
+			TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+		} catch e {
+			ShowError("Error generating Twitter auth key: %e%")
+		}
 	}
 
 	; Endlessly run checks for new tweets
@@ -275,9 +282,13 @@ StartTweetMirror() {
 		ProcessSuccessful := ProcessTwitterUpdates()
 		
 		if (!ProcessSuccessful) {
-			Menu, Tray, Icon, shell32.dll, %ERROR_ICON%
-			Menu, Tray, Tip, Error occurred when polling Twitter... regenerating auth key.
-			TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+			ShowError("Error occurred when polling Twitter... regenerating auth key.")
+			try {
+				TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
+			} catch e {
+				Menu, Tray, Tip, Error generating Twitter auth key: %e%
+				ShowError("Error generating Twitter auth key: %e%")
+			}
 		} else {
 			Menu, Tray, Icon, %DEFAULT_ICON% ; Restore default icon
 		}
