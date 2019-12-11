@@ -115,6 +115,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		metaHandler := New MetaFromURL(targetURL)
 		pageTitle := metaHandler.GetPageTitle()
 		pageDesription := metaHandler.GetPageDescription()
+		pageIcon := metaHandler.GetIconURL()
 		metaHandler.Quit()
 		
 		; Fill default meta if required
@@ -125,7 +126,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		
 
 		; Populate template
-		TeamsMsgJSON.sections[2].activityImage := "https://www.google.com/s2/favicons?domain_url=" . targetURL ; Use Google's favicon finder site to get icon
+		TeamsMsgJSON.sections[2].activityImage := pageIcon
 		TeamsMsgJSON.sections[2].activityTitle := pageTitle
 		TeamsMsgJSON.sections[2].activityText := pageDesription
 	}
@@ -243,6 +244,8 @@ ProcessTwitterUpdates() {
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
 		return true
 	}
+	
+	MsgBox, Mirrored
 	
 	; Update last processed tweet ID
 	; This speeds up future calls to Twitter API and tweet processing
