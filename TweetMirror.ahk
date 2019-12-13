@@ -121,8 +121,6 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		; Fill default meta if required
 		if (StrLen(pageTitle) < 3)
 			pageTitle := tweetObj.entities.urls[1].display_url
-		if (StrLen(pageDesription) < 3)
-			pageDesription := "No description."
 		
 
 		; Populate template
