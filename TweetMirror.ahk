@@ -101,7 +101,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	markdownText := tweetObj.full_text
 	for index, urlObj in tweetObj.entities.urls {
 		markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . urlObj.expanded_url . ")")
-		copyText := StrReplace(copyText, urlObj.url, urlObj.display_url)
+		copyText := StrReplace(copyText, urlObj.url, urlObj.expanded_url)
 	}
 	
 	; Fill URL preview area
@@ -118,7 +118,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		pageIcon := metaHandler.GetIconURL()
 		metaHandler.Quit()
 		
-		; Fill default meta if required
+		; If no title is supplied, replace with display URL
 		if (StrLen(pageTitle) < 3)
 			pageTitle := tweetObj.entities.urls[1].display_url
 		
