@@ -275,6 +275,7 @@ StartTweetMirror() {
 
 	; Endlessly run checks for new tweets
 	Loop {
+		Menu, Tray, Tip, Checking for new Tweets...
 		Menu, Tray, Icon, shell32.dll, %LOADING_ICON%
 		
 		; Add time to next poll time

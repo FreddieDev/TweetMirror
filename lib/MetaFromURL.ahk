@@ -7,27 +7,27 @@ class MetaFromURL {
 	__New(pageURL) {
 		This.currentURL := pageURL
 		
-		; This.CurrentSession := ComObjCreate("{D5E8041D-920F-45e9-B8FB-B1DEB82C6E5E}") ; Creates an InternetExplorerMedium instance (lowered security)
-		This.CurrentSession := ComObjCreate("InternetExplorer.Application") ; Creates an InternetExplorerMedium instance (lowered security)
-		This.CurrentSession.visible := false ; Hide IE window
-		This.CurrentSession.navigate(pageURL)
+		; Use get request to pull HTML from site as string
+		whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+		whr.Open("GET", pageURL, true) ; True waits for response before continuing
+		whr.Send()
+		whr.WaitForResponse()
+		HtmlText := whr.ResponseText
 
-		; Ensure webpage completely loads before continuing
-		while This.CurrentSession.ReadyState != 4
-			Sleep, 100
+		; Use HTML renderer so JS can be ran on HTML string
+		This.CurrentSession := ComObjCreate("HTMLFile")
+		This.CurrentSession.write(HtmlText)
 	}
-
-	; Ends IE process for current session
+	
 	Quit() {
-		This.CurrentSession.quit
+		This.CurrentSession.Close()
 	}
-
 
 	GetPageTitle() {
-		return This.CurrentSession.document.querySelector("[property='og:title']").content
+		return This.CurrentSession.getElementsByTagName("title")[0].text
 	}
 	GetPageDescription() {
-		return This.CurrentSession.document.querySelector("[property='og:description']").content
+		return "I dont know"
 	}
 	GetIconURL() {	
 		local iconURL
