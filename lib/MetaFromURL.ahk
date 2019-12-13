@@ -12,33 +12,56 @@ class MetaFromURL {
 		whr.Open("GET", pageURL, true) ; True waits for response before continuing
 		whr.Send()
 		whr.WaitForResponse()
-		HtmlText := whr.ResponseText
+		HTMLText := whr.ResponseText
+		
+		; Remove all scripts and CSS from HTML for faster rendering
+		; Removing scripts is necessary since any cookies set produce an old windows security warning request for the site to store cookies
+		strippedHTML := RegExReplace(HTMLText, "i)<(script|style)\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/(script|style)>", "")
 
 		; Use HTML renderer so JS can be ran on HTML string
 		This.CurrentSession := ComObjCreate("HTMLFile")
-		This.CurrentSession.write(HtmlText)
+		This.CurrentSession.write(strippedHTML)
 	}
 	
 	Quit() {
 		This.CurrentSession.Close()
 	}
-
-	GetPageTitle() {
-		return This.CurrentSession.getElementsByTagName("title")[0].text
-	}
 	
-	GetPageDescription() {
+	GetMetaContent(propertyName) {
 		metaTags := This.CurrentSession.getElementsByTagName("meta")
 		
 		; AHK for-loop doesn't work due to how HTMLFile returns a weird object
 		while (A_Index<=metaTags.length, i:=A_Index-1) {
 			metaTag := metaTags[i]
-			if (metaTag.getAttribute("name") == "description") {
+			if (metaTag.getAttribute("name") == propertyName) {
 				return metaTag.getAttribute("content")
 			}
 		}
 		
-		return "No description"
+		return false
+	}
+
+	GetPageTitle() {
+		local titleText
+		
+		try {
+			titleText := This.CurrentSession.getElementsByTagName("title")[0].text
+		}
+		
+		if (!titleText) {
+			titleText := This.GetMetaContent("title")
+		}
+		
+		return titleText
+	}
+	
+	GetPageDescription() {
+		description := This.GetMetaContent("description")
+		
+		if (!description)
+			description := "No description"
+		
+		return description
 	}
 	
 	; Finds the last matching (likely most-HD) link's href
