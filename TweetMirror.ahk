@@ -243,8 +243,6 @@ ProcessTwitterUpdates() {
 		return true
 	}
 	
-	MsgBox, Mirrored
-	
 	; Update last processed tweet ID
 	; This speeds up future calls to Twitter API and tweet processing
 	LastTweetID := MyTweets[1].id
