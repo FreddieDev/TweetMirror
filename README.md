@@ -6,7 +6,7 @@ Detects new tweets that contain a desired hashtag to forward them onto MS Teams 
 ### Installing
 1. Click [here](../../archive/master.zip) to download the app
 2. Unzip the file
-3. Run `install.bat`
+3. Run `install.bat` (**NOTE:** to finalize, you must enter `Y` or `N` to decide if you want TweetMirror to run on startup)
 4. Fill in all the prompted fields
 	- If you've made mistakes, right click the tray icon and select "Change Settings" to reconfigure
 4. You can now delete the downloaded files to cleanup
@@ -20,9 +20,9 @@ Detects new tweets that contain a desired hashtag to forward them onto MS Teams 
 6. Copy the generated WebHook URL
 
 ### Obtain Twitter consumer keys
-To bbtain a Twitter app consumer key and secret:
+To get a Twitter app consumer key and secret, either:
+- Contact me to use mine
 - Go to https://developer.twitter.com/en/apps and create an app
-- Message me to use mine
 
 
 ### Disabing startup launch
