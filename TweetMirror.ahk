@@ -277,7 +277,7 @@ StartTweetMirror() {
 		Menu, Tray, Icon, shell32.dll, %LOADING_ICON%
 		
 		; Add time to next poll time
-		NextPoll += PollRate
+		NextPoll := A_TickCount + PollRate
 		
 		; Check for new tweets
 		IniRead, LastTweetID, %SettingsName%, Vars, LastTweetID
