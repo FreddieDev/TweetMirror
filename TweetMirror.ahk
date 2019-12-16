@@ -102,8 +102,23 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	copyText := tweetObj.full_text
 	markdownText := tweetObj.full_text
 	for index, urlObj in tweetObj.entities.urls {
-		markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . urlObj.expanded_url . ")")
-		copyText := StrReplace(copyText, urlObj.url, urlObj.expanded_url)
+		fullURL := urlObj.expanded_url
+		
+		; Unshorten LinkedIn URLs
+		if InStr(fullURL, "https://lnkd.in/") {
+			whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+			whr.Open("HEAD", fullURL, true) ; True waits for response before continuing
+			whr.Send()
+			whr.WaitForResponse()
+			fullURL := whr.getResponseHeader("Location")
+			
+			urlObj.expanded_url := fullURL ; Update Twitter object's URL
+			
+		}
+		MsgBox, %fullURL%
+	
+		markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . fullURL . ")")
+		copyText := StrReplace(copyText, urlObj.url, fullURL)
 	}
 	
 	; Fill URL preview area
@@ -244,6 +259,8 @@ ProcessTwitterUpdates() {
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
 		return true
 	}
+	MsgBox, Mirrored
+	return true
 	
 	; Update last processed tweet ID
 	; This speeds up future calls to Twitter API and tweet processing
