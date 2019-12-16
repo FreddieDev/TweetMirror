@@ -87,6 +87,8 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	; Load teams card template JSON into object
 	; Useful card builder: https://messagecardplayground.azurewebsites.net/
 	;  Examples used: TINYPulse & Trello update
+	; UPDATE: Microsoft has discontinued support for legacy message cards in the playground,
+	;         despite this being the only card format supported by Connectors/Webhooks
 	FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
 	
 	; Catch file load error
