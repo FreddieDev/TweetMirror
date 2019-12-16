@@ -35,4 +35,4 @@ Download, unzip and run `installer.bat`
 To recompile the exe:
 1. Install [AutoHotkey](https://www.autohotkey.com/)
 2. Reboot (if step 3 fails)
-3. Right click the `.ahk` and select "Compile Script"
+3. Run `Compile TweetMirror.bat` to recompile all AHK scripts after making changes
