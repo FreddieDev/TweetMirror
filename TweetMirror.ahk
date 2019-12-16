@@ -89,7 +89,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	;  Examples used: TINYPulse & Trello update
 	; UPDATE: Microsoft has discontinued support for legacy message cards in the playground,
 	;         despite this being the only card format supported by Connectors/Webhooks
-	FileRead, TeamsMsgTemplate, TeamsCardTemplate.json
+	FileRead, TeamsMsgTemplate, lib\TeamsCardTemplate.json
 	
 	; Catch file load error
 	if (ErrorLevel) {
