@@ -101,7 +101,6 @@ class MetaFromURL {
 		if (!iconURL)
 			iconURL := "https://www.google.com/s2/favicons?domain_url=" . This.CurrentURL ; Use Google's favicon finder site to get low-res icon (png) as fallback
 	
-		MsgBox, %iconURL%
 		return iconURL
 	}
 }
