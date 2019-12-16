@@ -32,6 +32,9 @@ By default, TweetMirror launches on startup. This can be disabled via the startu
 Download and run `uninstall.bat`
 
 
+<br/>
+<br/>
+
 ## Developing
 To recompile the exe:
 1. Install [AutoHotkey](https://www.autohotkey.com/)
