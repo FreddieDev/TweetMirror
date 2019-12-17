@@ -39,8 +39,6 @@ class MetaFromURL {
 			}
 		}
 		
-		MsgBox, %tagnames%
-		
 		return false
 	}
 
@@ -91,10 +89,21 @@ class MetaFromURL {
 				;  /media/favicon.ico
 				;  https://www.google.com/media/favicon.ico
 				;
-				; We ALWAYS need the full address. To solve this, this regex removes the protocol & domain (if it exists) so it can later be re-added				
-				targetURL := RegExReplace(linkElem.href, "i)^(?:\/\/|[^\/]+)*", "")
-			
-				return drive . targetURL ; Add domain name onto URL
+				; Some sites also use different domains to host their icons, for instance:
+				;  https://www.stackoverflow.com
+				;   Hosts their icon at:
+				;  https://cdn.sstatic.net/Sites/stackoverflow/img/apple-touch-icon.png
+				;
+				; A full address is ALWAYS needed. To solve this, use regex to detect if a URL contains no protocol & domain so it can be re-added
+
+				; Detect if the URL doesn't contain a domain & protocol
+				linkIsRelative := !RegExMatch(linkElem.href, "i)^(?:\/\/|[^\/]+)*")
+				
+				if (linkIsRelative) {
+					return drive . targetURL ; Add domain name onto URL				
+				} else {
+					return targetURL
+				}
 			}
 		}
 		
@@ -103,8 +112,8 @@ class MetaFromURL {
 	
 	; Function to fetch icon from page
 	; These can be tested in the Chrome debugger like so:
-	;  document.querySelector("meta[property='og:image']").getAttribute('content')
 	;  document.querySelector("link[href*=apple-touch-icon]").href
+	;  document.querySelector("meta[property='og:image']").getAttribute('content')
 	;  document.querySelectorAll("link[href*=favicon]:not([href*='.ico']")
 	GetIconURL() {
 		iconURL := This.GetLinkHref("apple-touch-icon") ; Apple icons are the best quality
@@ -124,7 +133,10 @@ class MetaFromURL {
 		; Use Google's favicon finder site to get low-res icon (png) as fallback
 		if (!iconURL)
 			iconURL := "https://www.google.com/s2/favicons?domain_url=" . This.CurrentURL
-	
+		
+		if (debugMode)
+			MsgBox, iconURL: %iconURL%
+		
 		return iconURL
 	}
 }
