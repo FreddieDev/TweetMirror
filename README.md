@@ -15,7 +15,7 @@ Detects new tweets that contain a desired hashtag to forward them onto MS Teams 
 1. In Teams, right click the channel you want to mirror Tweets to
 2. Click "Connectors"
 3. Press "Add" or "Configure" on the "Incoming Webhook" connector
-4. Enter a name (you may also [upload the icon](../../master/artwork/TweetMirror%20-%20Teams.png?raw=true))
+4. Enter a name (you may also [upload the icon](../../master/TweetMirror%20Teams%20icon.png?raw=true))
 5. Press "Create"
 6. Copy the WebHook URL
 
