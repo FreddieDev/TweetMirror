@@ -80,7 +80,7 @@ class MetaFromURL {
 		; AHK for-loop doesn't work due to how HTMLFile returns a weird object
 		while (A_Index<=links.length, i:=links.length-A_Index) {
 			linkElem := links[i]
-
+			
 			if (InStr(linkElem.href, searchText) and (!filterText or !InStr(linkElem.href, filterText)) ) {
 				currURL := This.CurrentURL
 				SplitPath, currURL, name, dir, ext, name_no_ext, drive ; Split URL into parts
@@ -95,9 +95,13 @@ class MetaFromURL {
 				;  https://cdn.sstatic.net/Sites/stackoverflow/img/apple-touch-icon.png
 				;
 				; A full address is ALWAYS needed. To solve this, use regex to detect if a URL contains no protocol & domain so it can be re-added
-
+				
+				; Extract URL from element
+				targetURL := linkElem.getAttribute("href")
+				
 				; Detect if the URL doesn't contain a domain & protocol
-				linkIsRelative := !RegExMatch(linkElem.href, "i)^(?:\/\/|[^\/]+)*")
+				RegExMatch(targetURL, "Oi)^(?:\/\/|[^\/]+)*", matchObj)
+				linkIsRelative := matchObj.Count() == 0 ; Checks regex for matches
 				
 				if (linkIsRelative) {
 					return drive . targetURL ; Add domain name onto URL				
@@ -113,8 +117,8 @@ class MetaFromURL {
 	; Function to fetch icon from page
 	; These can be tested in the Chrome debugger like so:
 	;  document.querySelector("link[href*=apple-touch-icon]").href
-	;  document.querySelector("meta[property='og:image']").getAttribute('content')
 	;  document.querySelectorAll("link[href*=favicon]:not([href*='.ico']")
+	;  document.querySelector("meta[property='og:image']").getAttribute('content')
 	GetIconURL() {
 		iconURL := This.GetLinkHref("apple-touch-icon") ; Apple icons are the best quality
 		

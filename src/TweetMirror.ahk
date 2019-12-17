@@ -50,6 +50,7 @@ Menu, Tray, Add
 ; Add option to reload the current script (in case changes were made)
 MenuReloadScriptText := "Restart"
 Menu, Tray, Add, %MenuReloadScriptText%, MenuHandler
+Menu, Tray, Default, %MenuReloadScriptText%
 
 ; Add option to exit the current script
 MenuExitScriptText := "Exit"
