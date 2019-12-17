@@ -27,37 +27,46 @@ class MetaFromURL {
 		This.CurrentSession.Close()
 	}
 	
-	GetMetaContent(propertyName) {
+	GetMetaContent(attributeName, propertyName) {
 		metaTags := This.CurrentSession.getElementsByTagName("meta")
 		
 		; AHK for-loop doesn't work due to how HTMLFile returns a weird object
 		while (A_Index<=metaTags.length, i:=A_Index-1) {
 			metaTag := metaTags[i]
-			if (metaTag.getAttribute("name") == propertyName) {
+			
+			if (metaTag.getAttribute(attributeName) == propertyName) {
 				return metaTag.getAttribute("content")
 			}
 		}
+		
+		MsgBox, %tagnames%
 		
 		return false
 	}
 
 	GetPageTitle() {
-		local titleText
+		titleText := This.GetMetaContent("property", "og:title") ; Try to get meta title
 		
+		; Fallback to Twitter card's title
+		if (!titleText)
+			titleText := This.GetMetaContent("name", "twitter:title")
+		
+		; Final fallback, fetch page's title element text instead if one exists
 		try {
 			titleText := This.CurrentSession.getElementsByTagName("title")[0].text
-		}
-		
-		if (!titleText) {
-			titleText := This.GetMetaContent("title")
 		}
 		
 		return titleText
 	}
 	
 	GetPageDescription() {
-		description := This.GetMetaContent("description")
+		description := This.GetMetaContent("property", "og:description") ; Try to get page description
 		
+		; Fallback to Twitter card description
+		if (!description)
+			description := This.GetMetaContent("name", "twitter:description")		
+		
+		; If none found, just output no description
 		if (!description)
 			description := "No description"
 		
@@ -92,14 +101,29 @@ class MetaFromURL {
 		return false
 	}
 	
-	GetIconURL() {	
+	; Function to fetch icon from page
+	; These can be tested in the Chrome debugger like so:
+	;  document.querySelector("meta[property='og:image']").getAttribute('content')
+	;  document.querySelector("link[href*=apple-touch-icon]").href
+	;  document.querySelectorAll("link[href*=favicon]:not([href*='.ico']")
+	GetIconURL() {
 		iconURL := This.GetLinkHref("apple-touch-icon") ; Apple icons are the best quality
-
+		
+		; Get any icon (excluding .ico's, since teams can't render them)
 		if (!iconURL)
 			iconURL := This.GetLinkHref("favicon", ".ico") ; Find non-.ico icons (unsupported by MS teams)
-
+		
+		; Try article img (likely not correct aspect ratio)
 		if (!iconURL)
-			iconURL := "https://www.google.com/s2/favicons?domain_url=" . This.CurrentURL ; Use Google's favicon finder site to get low-res icon (png) as fallback
+			iconURL := This.GetMetaContent("property", "og:image")
+			
+		; Try Twitter card image (likely not correct aspect ratio)
+		if (!iconURL)
+			iconURL := This.GetMetaContent("name", "twitter:image")
+		
+		; Use Google's favicon finder site to get low-res icon (png) as fallback
+		if (!iconURL)
+			iconURL := "https://www.google.com/s2/favicons?domain_url=" . This.CurrentURL
 	
 		return iconURL
 	}
