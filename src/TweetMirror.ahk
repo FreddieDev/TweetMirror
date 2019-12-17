@@ -40,6 +40,10 @@ Menu, Tray, Tip, TweetMirror
 Menu, Tray, Icon, %DEFAULT_ICON%
 Menu, Tray, NoStandard
 
+; Add credits button
+MenuAboutText := "About"
+Menu, Tray, Add, %MenuAboutText%, MenuHandler
+
 ; Add change settings button
 MenuChangeSettingsText := "Change settings"
 Menu, Tray, Add, %MenuChangeSettingsText%, MenuHandler
@@ -414,8 +418,9 @@ MenuHandler:
 	} else if (A_ThisMenuItem = MenuExitScriptText) {
 		ExitApp
 	} else if (A_ThisMenuItem = MenuChangeSettingsText) {
-		; FirstTimeSetup(SettingsName, true)
 		Settings.Change()
+	} else if (A_ThisMenuItem = MenuAboutText) {
+		MsgBox,0, TweetMirror Credits, Created by Freddie Chessell`, 2019
 	}
 
 	return
