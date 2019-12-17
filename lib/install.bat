@@ -37,12 +37,17 @@ IF NOT EXIST %installDir% (
 	mkdir %installDir%
 )
 
+IF NOT EXIST %installDir%\lib (
+	echo.
+	echo Making TweetMirror lib folder...
+	mkdir %installDir%\lib
+)
+
 echo.
 echo Installing files...
 copy TweetMirror.exe %installDir%\TweetMirror.exe
 copy TweetMirror.ini %installDir%\TweetMirror.ini
-copy TeamsCardTemplate.json %installDir%\TeamsCardTemplate.json
-
+copy lib\TeamsCardTemplate.json %installDir%\lib\TeamsCardTemplate.json
 
 echo.
 echo Starting app...
