@@ -8,8 +8,8 @@ cls
 echo Detecting install state...
 IF NOT EXIST %installDir% (
 	echo Running installer...
-	start "" "lib\installer.exe"
+	start "" "src\lib\installer.exe"
 ) else (
 	echo Running uninstaller...
-	start "" "lib\uninstaller.exe"
+	start "" "src\lib\uninstaller.exe"
 )
