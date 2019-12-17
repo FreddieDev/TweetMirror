@@ -11,7 +11,7 @@ SettingsName := "TweetMirror.ini"
 #Include lib\Settings.ahk
 
 ; Developer settings
-global debugMode := true ; Set to true to pause after mirroring tweets without updating LastTweetID (no need to tweet every test, simply un-pause)
+global debugMode := false ; Set to true to pause after mirroring tweets without updating LastTweetID (no need to tweet every test, simply un-pause)
 
 ; Global vars (leave empty, `global` shares them with included scripts)
 global TeamsWebhookURL :=
@@ -145,7 +145,17 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		; Process URL shorteners (bit.ly, tinyURL, Twitter/t.co, LinkedIn/lnkd.in etc)
 		fullURL := UnShortenURL(urlObj.expanded_url)
 		
-		MsgBox, %fullURL%
+		; Keep following redirects until the URL remains the same
+		; This allows shortened shortened URLs to be expanded
+		; People regularly do this when copying LinkedIn URLs from Twitter e.g:
+		;  t.co > lnkd.in > URL
+		Loop {
+			newFullURL := UnShortenURL(fullURL)
+			if (newFullURL = fullURL)
+				break
+			else
+				fullURL := newFullURL
+		}
 		
 		; Update Twitter object's URL
 		urlObj.expanded_url := fullURL
