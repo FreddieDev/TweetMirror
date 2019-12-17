@@ -30,6 +30,7 @@ LOADING_ICON := 239
 DEFAULT_ICON := StrReplace(A_ScriptFullPath, ".ahk", ".exe")
 NextPoll := A_TickCount
 global MaxRedirects := 10 ; How many times to attempt to unshorten a URL max before giving up
+global MaxCharsInDisplayURL := 30 ; How many characters to display in a URL in teams before trimming and adding an ellipses (URL still clickable)
 
 
 
@@ -108,6 +109,20 @@ UnShortenURL(urlToShorten) {
 	return newURL
 }
 
+; Takes a full URL and strips domain, protocol and crops the length
+GenerateDisplayURL(urlToClean) {
+	
+	; Remove protocol (https/http) and www.
+	cleanedURL := RegExReplace(urlToClean, "i)^(?:https?:\/\/)?(?:www\.)?", "")
+	
+	; If URL is too long, remove chars from end and add "..."
+	if (strLen(cleanedURL) > 30) {
+		cleanedURL := SubStr(cleanedURL, 1, MaxCharsInDisplayURL - 3) . "..."
+	}
+	
+	return cleanedURL
+}
+
 
 ; Takes a tweet object and sends it to MS teams
 MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
@@ -152,6 +167,9 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		
 		; Update Twitter object's URL
 		urlObj.expanded_url := fullURL
+		
+		; Build a new clean display URL so it's unshortened and readable
+		urlObj.display_url := GenerateDisplayURL(fullURL)
 	
 		markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . fullURL . ")")
 		copyText := StrReplace(copyText, urlObj.url, fullURL)
@@ -228,6 +246,12 @@ GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret) {
 
 	; Parse JSON string into object
 	authObj := JSON.Load(whr.ResponseText)
+	
+	; Tell user if an error has occured
+	if (authObj.errors) {
+		errorMsg := authObj.errors[1].message
+		MsgBox, Error authenticating with Twitter: %errorMsg%
+	}
 	
 	; Cache token
 	TwitterAccessToken := authObj.access_token
@@ -319,7 +343,7 @@ StartTweetMirror() {
 	global
 	
 	; Get Twitter app (FreddieDevTweetMirror) access token if none is cached
-	if (TwitterAccessToken = error or StrLen(TwitterAccessToken) = 0) {
+	if (StrLen(TwitterAccessToken) == 0 or TwitterAccessToken = error) {
 		try {
 			TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
 		} catch e {
