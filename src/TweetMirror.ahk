@@ -94,15 +94,15 @@ UnShortenURL(urlToShorten) {
 	whr.Send()
 	whr.WaitForResponse()
 	
-	; If error 3XX (e.g. 301, 304 etc) is returned, the server is returning
+	; If status 3XX (e.g. 301, 304 etc) is returned, the server is returning
 	; a msg containing a redirect 'Location' header
 	newURL :=
 	if (Floor(whr.status / 100) == 3) {
 		newURL := whr.getResponseHeader("Location")
 	} else {
-		; Sometimes URL shorteners are automatic, so just return the newest
+		; Sometimes URL shortening is automatic, so just return the final
 		; URL (will either be shortened or the same)
-		newURL := whr.Option(1) ; WinHttpRequestOption_URL := 1
+		newURL := whr.Option(1) ; WinHttpRequestOption_URL == 1
 	}
 	
 	return newURL
