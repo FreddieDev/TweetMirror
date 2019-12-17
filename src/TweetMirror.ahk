@@ -10,6 +10,9 @@ SettingsName := "TweetMirror.ini"
 #Include lib\MetaFromURL.ahk
 #Include lib\Settings.ahk
 
+; Developer settings
+global debugMode := true ; Set to true to pause after mirroring tweets without updating LastTweetID (no need to tweet every test, simply un-pause)
+
 ; Global vars (leave empty, `global` shares them with included scripts)
 global TeamsWebhookURL :=
 global TwitterScreenName :=
@@ -81,6 +84,42 @@ ProcessTwitterAPICall(authtoken, url) {
 }
 
 
+; Sends HTTP request to URL to see if it returns a redirect URL
+UnShortenURL(urlToShorten) {
+	isLinkedInShortened := InStr(urlToShorten, "https://lnkd.in/")
+	
+	; Get headers from URL's server
+	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	whr.Open("HEAD", urlToShorten, true) ; True waits for response before continuing
+	whr.Send()
+	whr.WaitForResponse()
+	
+	; If error 3XX (e.g. 301, 304 etc) is returned, the server is returning
+	; a msg containing a redirect 'Location' header
+	newURL :=
+	if (Floor(whr.status / 100) == 3) {
+		newURL := whr.getResponseHeader("Location")
+	} else {
+		; Sometimes URL shorteners are automatic, so just return the newest
+		; URL (will either be shortened or the same)
+		newURL := whr.Option(1) ; WinHttpRequestOption_URL := 1
+	}
+	
+	; Unshortened LinkedIn URLs often return another shortened LinkedIn URL
+	; in varying formats that requires a follow-up to get the final destination.
+	if (isLinkedInShortened) {
+		MsgBox, MATCH
+		whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+		whr.Open("HEAD", newURL, true) ; True waits for response before continuing
+		whr.Send()
+		whr.WaitForResponse()
+		newURL := whr.Option(1) ; Retrieve URL from options WinHttpRequestOption_URL := 1
+	}
+	
+	return newURL
+}
+
+
 ; Takes a tweet object and sends it to MS teams
 MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	
@@ -102,28 +141,14 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	copyText := tweetObj.full_text
 	markdownText := tweetObj.full_text
 	for index, urlObj in tweetObj.entities.urls {
-		fullURL := urlObj.expanded_url
 		
-		; MsgBox, prev URL: %fullURL%
+		; Process URL shorteners (bit.ly, tinyURL, Twitter/t.co, LinkedIn/lnkd.in etc)
+		fullURL := UnShortenURL(urlObj.expanded_url)
 		
-		; Unshorten LinkedIn URLs
-		if InStr(fullURL, "https://lnkd.in/") {
-			; Get full unshortened LinkedIn redirect URL
-			whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-			whr.Open("HEAD", fullURL, true) ; True waits for response before continuing
-			whr.Send()
-			whr.WaitForResponse()
-			fullURL := whr.getResponseHeader("Location") ; Location header contains expanded LinkedIn URL
-			
-			; Follow expanded LinkedIn URL to retrieve original URL
-			whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-			whr.Open("HEAD", fullURL, true) ; True waits for response before continuing
-			whr.Send()
-			whr.WaitForResponse()
-			newURL := whr.Option(1) ; Retrieve URL from options WinHttpRequestOption_URL := 1
-			
-			urlObj.expanded_url := newURL ; Update Twitter object's URL
-		}
+		MsgBox, %fullURL%
+		
+		; Update Twitter object's URL
+		urlObj.expanded_url := fullURL
 	
 		markdownText := StrReplace(markdownText, urlObj.url, "[" . urlObj.display_url . "]" . "(" . fullURL . ")")
 		copyText := StrReplace(copyText, urlObj.url, fullURL)
@@ -265,6 +290,11 @@ ProcessTwitterUpdates() {
 		Menu, Tray, Tip, %mirroredTweets% new #%TweetHashtag% Tweet%plural% recently mirrored!
 	} else {
 		SetTimer UpdateMenuTip, 1000 ; Endlessly runs tray tooltip updater
+		return true
+	}
+	
+	if (debugMode) {
+		MsgBox, Mirrored
 		return true
 	}
 	
