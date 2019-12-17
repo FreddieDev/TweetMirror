@@ -44,6 +44,6 @@ ButtonInstall:
 	
 	RunWait install.bat %parameters%
 	
-	MsgBox, Install completed!
+	MsgBox,0,TweetMirror installation, Install completed!
 	
 	ExitApp

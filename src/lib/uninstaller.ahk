@@ -34,7 +34,7 @@ ButtonContinue:
 	
 	if (uninstall) {
 		RunWait uninstall.bat
-		MsgBox, Uninstall complete!
+		MsgBox,0,TweetMirror installation, Uninstall completed!
 	} else if (update) {
 		Run installer.exe
 	}
