@@ -29,6 +29,7 @@ ERROR_ICON := 78
 LOADING_ICON := 239
 DEFAULT_ICON := StrReplace(A_ScriptFullPath, ".ahk", ".exe")
 NextPoll := A_TickCount
+global MaxRedirects := 10 ; How many times to attempt to unshorten a URL max before giving up
 
 
 
@@ -86,8 +87,7 @@ ProcessTwitterAPICall(authtoken, url) {
 
 ; Sends HTTP request to URL to see if it returns a redirect URL
 UnShortenURL(urlToShorten) {
-	isLinkedInShortened := InStr(urlToShorten, "https://lnkd.in/")
-	
+
 	; Get headers from URL's server
 	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
 	whr.Open("HEAD", urlToShorten, true) ; True waits for response before continuing
@@ -103,17 +103,6 @@ UnShortenURL(urlToShorten) {
 		; Sometimes URL shorteners are automatic, so just return the newest
 		; URL (will either be shortened or the same)
 		newURL := whr.Option(1) ; WinHttpRequestOption_URL := 1
-	}
-	
-	; Unshortened LinkedIn URLs often return another shortened LinkedIn URL
-	; in varying formats that requires a follow-up to get the final destination.
-	if (isLinkedInShortened) {
-		MsgBox, MATCH
-		whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-		whr.Open("HEAD", newURL, true) ; True waits for response before continuing
-		whr.Send()
-		whr.WaitForResponse()
-		newURL := whr.Option(1) ; Retrieve URL from options WinHttpRequestOption_URL := 1
 	}
 	
 	return newURL
@@ -145,17 +134,21 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 		; Process URL shorteners (bit.ly, tinyURL, Twitter/t.co, LinkedIn/lnkd.in etc)
 		fullURL := UnShortenURL(urlObj.expanded_url)
 		
-		; Keep following redirects until the URL remains the same
-		; This allows shortened shortened URLs to be expanded
+		; Keep attempting unshortening until the URL remains the same
+		; This allows shortened shortened (etc) URLs to be expanded
+		;
 		; People regularly do this when copying LinkedIn URLs from Twitter e.g:
 		;  t.co > lnkd.in > URL
-		Loop {
+		Loop, %MaxRedirects% {
 			newFullURL := UnShortenURL(fullURL)
 			if (newFullURL = fullURL)
 				break
 			else
 				fullURL := newFullURL
 		}
+		
+		if (debugMode)
+			MsgBox, Unshortened URL: %fullURL%
 		
 		; Update Twitter object's URL
 		urlObj.expanded_url := fullURL
