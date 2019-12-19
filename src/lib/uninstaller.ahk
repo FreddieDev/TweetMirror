@@ -20,7 +20,7 @@ Gui Font, s10
 Gui Add, Text, x19 y37 w465 h18 +0x200, Choose how you want to proceed...
 Gui Font
 Gui Add, Text, x38 y138 w318 h23 +0x200, Removes TweetMirror from your computer
-Gui Add, Text, x37 y88 w263 h23 +0x200, Reinstalls TweetMirror to replaces current version with this download
+Gui Add, Text, x37 y88 w350 h23 +0x200, Reinstalls TweetMirror to replaces current version with this download
 
 Gui Show, w559 h299, TweetMirror installer
 Return
