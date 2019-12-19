@@ -1,5 +1,7 @@
 # TweetMirror
-Detects new tweets that contain a desired hashtag to forward them onto MS Teams automatically
+Detects new tweets that contain a desired hashtag to forward them onto MS Teams automatically.
+
+TweetMirror runs checks periodically in the background of your PC. You can force a check by double-clicking the tray icon.
 
 
 ## How to use
