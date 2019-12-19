@@ -208,6 +208,10 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	; Process hashtags in message
 	hashtagRegex := "i)\B#([a-z0-9]{2,})(?![~!@#$%^&*()=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds hashtags in text (excludes URLs, no spaces before etc)
 	markdownText := RegExReplace(markdownText, hashtagRegex, "[#$1](https://twitter.com/hashtag/$1?src=hashtag_click)")
+	
+	; Process user tags in message (@Freddie)
+	userTags := "i)\@([a-z0-9]+)(?![~!\@$%^&*=+_`\-\|\/'\[\]\{\}]|[?.,]*\w)" ; Finds @<username> in text (excludes URLs, email addresses etc)
+	markdownText := RegExReplace(markdownText, userTags, "[@$1](https://twitter.com/$1)")
 
 	; Fill in template:
 	TeamsMsgJSON.title := tweetObj.user.name . " Tweeted:"
