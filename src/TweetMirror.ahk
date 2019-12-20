@@ -185,24 +185,30 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	if (urlCount = 0) {
 		TeamsMsgJSON.sections[2] := []
 	} else {
-		targetURL := StrReplace(tweetObj.entities.urls[1].expanded_url, "\/", "/")
 		
-		; Extract metadata from URL
-		metaHandler := New MetaFromURL(targetURL)
-		pageTitle := metaHandler.GetPageTitle()
-		pageDesription := metaHandler.GetPageDescription()
-		pageIcon := metaHandler.GetIconURL()
-		metaHandler.Quit()
-		
-		; If no title is supplied, replace with display URL
-		if (StrLen(pageTitle) < 3)
-			pageTitle := tweetObj.entities.urls[1].display_url
-		
-
-		; Populate template
-		TeamsMsgJSON.sections[2].activityImage := pageIcon
-		TeamsMsgJSON.sections[2].activityTitle := pageTitle
-		TeamsMsgJSON.sections[2].activityText := pageDesription
+		; Loop through URLs, duplicating the preview template and filling with
+		; data from URL.
+		for index, urlObj in tweetObj.entities.urls {
+			unescapedURL := StrReplace(urlObj.expanded_url, "\/", "/")
+			
+			; Extract metadata from URL
+			metaHandler := New MetaFromURL(unescapedURL)
+			pageTitle := metaHandler.GetPageTitle(urlObj.display_url)
+			pageDesription := metaHandler.GetPageDescription()
+			pageIcon := metaHandler.GetIconURL()
+			metaHandler.Quit()
+			
+			; Copy template section to new section
+			TeamsMsgJSON.sections[index + 1] := TeamsMsgJSON.sections[2].Clone()
+			
+			; Populate template
+			TeamsMsgJSON.sections[index + 1].activityImage := pageIcon
+			TeamsMsgJSON.sections[index + 1].activityTitle := pageTitle
+			TeamsMsgJSON.sections[index + 1].activityText := pageDesription
+			
+			; Only show one link preview
+			break
+		}
 	}
 	
 	; Process hashtags in message

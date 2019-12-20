@@ -42,7 +42,7 @@ class MetaFromURL {
 		return false
 	}
 
-	GetPageTitle() {
+	GetPageTitle(fallbackTitle) {
 		titleText := This.GetMetaContent("property", "og:title") ; Try to get meta title
 		
 		; Fallback to Twitter card's title
@@ -53,6 +53,10 @@ class MetaFromURL {
 		try {
 			titleText := This.CurrentSession.getElementsByTagName("title")[0].text
 		}
+		
+		; Use default if none is found on page
+		if (!titleText)
+			titleText := fallbackTitle
 		
 		return titleText
 	}
