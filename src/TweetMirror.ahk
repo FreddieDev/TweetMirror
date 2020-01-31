@@ -238,7 +238,7 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	
 	teamsReply := whr.ResponseText
 	if (teamsReply != "1")
-		MsgBox, "Error posting in Teams: " . teamsReply
+		MsgBox, Error posting in Teams: %teamsReply%
 }
 
 
