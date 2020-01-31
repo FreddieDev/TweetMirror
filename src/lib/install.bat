@@ -8,6 +8,7 @@ mode con: cols=90 lines=20
 set "installDir=%USERPROFILE%\Documents\TweetMirror"
 set "startupDir=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 
+REM Get install parameters
 set "runOnStartup=0"
 set "createDesktopShortcut=0"
 FOR %%A IN (%*) DO (

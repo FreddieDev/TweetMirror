@@ -39,7 +39,6 @@
 		TweetHashtag := Trim(StrReplace(TweetHashtag, "#"))
 		ConsumerKey := Trim(ConsumerKey)
 		ConsumerSecret := Trim(ConsumerSecret)
-		ConsumerSecret := Trim(TeamsWebhookURL)
 		
 		; Write user's settings
 		IniWrite, %TeamsWebhookURL%, %SettingsName%, Settings, TeamsWebhookURL
