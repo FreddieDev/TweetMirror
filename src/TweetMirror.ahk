@@ -286,7 +286,7 @@ ProcessTwitterUpdates() {
 	global
 	
 	; Get tweets
-	TweetsURL := GetTweetsAPIURL("lloydjason94", LastTweetID)
+	TweetsURL := GetTweetsAPIURL(TwitterScreenName, LastTweetID)
 	MyTweetsJSON := ProcessTwitterAPICall(TwitterAccessToken, TweetsURL)
 	if (!MyTweetsJSON)
 		return false
