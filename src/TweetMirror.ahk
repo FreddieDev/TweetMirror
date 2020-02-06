@@ -25,7 +25,7 @@ global TwitterAccessToken :=
 ; Global vars (hard-coded settings)
 PollRate := 30000 ; How frequently to check for new tweets
 MaxSearchedTweets := 20 ; The maximum amount of Tweets to look through
-ERROR_ICON := 78
+ERROR_ICON := 110
 LOADING_ICON := 239
 DEFAULT_ICON := StrReplace(A_ScriptFullPath, ".ahk", ".exe")
 NextPoll := A_TickCount
@@ -234,7 +234,13 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	whr.Open("POST", TeamsWebhookURL, true)
 	whr.SetRequestHeader("Content-Type", "application/json")
 	whr.Send(TeamsMsgJSONStr)
-	whr.WaitForResponse()
+	
+	try {
+		whr.WaitForResponse()
+	} catch {
+		ShowError("Connection to Microsoft Teams timed out.")
+		return
+	}
 	
 	teamsReply := whr.ResponseText
 	if (teamsReply != "1")
@@ -256,8 +262,12 @@ GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret) {
 	whr.Send("grant_type=client_credentials")
 	
 	; Wait for response to load
-	whr.WaitForResponse()
-	sleep 200
+	try {
+		whr.WaitForResponse()
+	} catch {
+		ShowError("Connection to Twitter auth API timed out.")
+		return
+	}
 
 	; Parse JSON string into object
 	authObj := JSON.Load(whr.ResponseText)
@@ -350,6 +360,7 @@ ProcessTwitterUpdates() {
 
 
 ShowError(msg) {
+	global ; Gives access to vars like ERROR_ICON
 	Menu, Tray, Icon, shell32.dll, %ERROR_ICON%
 	Menu, Tray, Tip, %msg%
 }
@@ -362,7 +373,7 @@ StartTweetMirror() {
 		try {
 			TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
 		} catch e {
-			ShowError("Error generating Twitter auth key: %e%")
+			ShowError("Error generating Twitter auth key (line " . e.Line . ")")
 		}
 	}
 
@@ -383,8 +394,7 @@ StartTweetMirror() {
 			try {
 				TwitterAccessToken := GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret)
 			} catch e {
-				Menu, Tray, Tip, Error generating Twitter auth key: %e%
-				ShowError("Error generating Twitter auth key: %e%")
+				ShowError("Error generating Twitter auth key (line " . e.Line . ")")
 			}
 		} else {
 			Menu, Tray, Icon, %DEFAULT_ICON% ; Restore default icon
