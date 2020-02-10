@@ -95,20 +95,26 @@ ProcessTwitterAPICall(authtoken, url) {
 UnShortenURL(urlToShorten) {
 
 	; Get headers from URL's server
-	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-	whr.Open("HEAD", urlToShorten, true) ; True waits for response before continuing
-	whr.Send()
-	whr.WaitForResponse()
+	urlWHR := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	urlWHR.Open("HEAD", urlToShorten, true) ; True waits for response before continuing
+	urlWHR.Send()
+	
+	try {
+		urlWHR.WaitForResponse()
+	} catch {
+		ShowError("Connection to URL '" . urlToShorten . "' timed out.")
+		return
+	}
 	
 	; If status 3XX (e.g. 301, 304 etc) is returned, the server is returning
 	; a msg containing a redirect 'Location' header
 	newURL :=
-	if (Floor(whr.status / 100) == 3) {
-		newURL := whr.getResponseHeader("Location")
+	if (Floor(urlWHR.status / 100) == 3) {
+		newURL := urlWHR.getResponseHeader("Location")
 	} else {
 		; Sometimes URL shortening is automatic, so just return the final
 		; URL (will either be shortened or the same)
-		newURL := whr.Option(1) ; WinHttpRequestOption_URL == 1
+		newURL := urlWHR.Option(1) ; WinHttpRequestOption_URL == 1
 	}
 	
 	return newURL
@@ -230,19 +236,19 @@ MirrorTweetToTeams(TeamsWebhookURL, tweetObj) {
 	TeamsMsgJSONStr := JSON.Dump( TeamsMsgJSON )
 
 	; Send message to teams webhook
-	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-	whr.Open("POST", TeamsWebhookURL, true)
-	whr.SetRequestHeader("Content-Type", "application/json")
-	whr.Send(TeamsMsgJSONStr)
+	teamsWHR := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	teamsWHR.Open("POST", TeamsWebhookURL, true)
+	teamsWHR.SetRequestHeader("Content-Type", "application/json")
+	teamsWHR.Send(TeamsMsgJSONStr)
 	
 	try {
-		whr.WaitForResponse()
+		teamsWHR.WaitForResponse()
 	} catch {
 		ShowError("Connection to Microsoft Teams timed out.")
 		return
 	}
 	
-	teamsReply := whr.ResponseText
+	teamsReply := teamsWHR.ResponseText
 	if (teamsReply != "1")
 		MsgBox, Error posting in Teams: %teamsReply%
 }
@@ -255,22 +261,22 @@ GetTwitterAccessToken(SettingsName, ConsumerKey, ConsumerSecret) {
 	AuthString := "Basic " . BearerTokenCredentialsEncoded
 	
 	; Post request to Twitter for auth token
-	whr := ComObjCreate("WinHttp.WinHttpRequest.5.1")
-	whr.Open("POST", "https://api.twitter.com/oauth2/token", true)
-	whr.SetRequestHeader("Authorization", AuthString)
-	whr.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
-	whr.Send("grant_type=client_credentials")
+	twitterWHR := ComObjCreate("WinHttp.WinHttpRequest.5.1")
+	twitterWHR.Open("POST", "https://api.twitter.com/oauth2/token", true)
+	twitterWHR.SetRequestHeader("Authorization", AuthString)
+	twitterWHR.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+	twitterWHR.Send("grant_type=client_credentials")
 	
 	; Wait for response to load
 	try {
-		whr.WaitForResponse()
+		twitterWHR.WaitForResponse()
 	} catch {
 		ShowError("Connection to Twitter auth API timed out.")
 		return
 	}
 
 	; Parse JSON string into object
-	authObj := JSON.Load(whr.ResponseText)
+	authObj := JSON.Load(twitterWHR.ResponseText)
 	
 	; Tell user if an error has occured
 	if (authObj.errors) {
